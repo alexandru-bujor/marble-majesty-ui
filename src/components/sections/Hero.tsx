@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import heroImage from '@/assets/hero-marble-table.jpg';
 
@@ -67,12 +68,12 @@ const Hero = () => {
             className="pt-4 opacity-0 animate-fade-in-up"
             style={{ animationDelay: '800ms', animationFillMode: 'forwards' }}
           >
-            <a
-              href="#collections"
+            <Link
+              to="/shop"
               className="btn-luxury inline-block"
             >
               Explorează Colecția
-            </a>
+            </Link>
           </div>
         </div>
 

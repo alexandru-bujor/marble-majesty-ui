@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, ShoppingBag } from 'lucide-react';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -14,11 +16,14 @@ const Navbar = () => {
   }, []);
 
   const navLinks = [
-    { name: 'Colecții', href: '#collections' },
-    { name: 'Showroom', href: '#showroom' },
-    { name: 'Despre Noi', href: '#about' },
-    { name: 'Contact', href: '#contact' },
+    { name: 'Acasă', href: '/' },
+    { name: 'Magazin', href: '/shop' },
+    { name: 'Showroom', href: '/showroom' },
+    { name: 'Despre Noi', href: '/about' },
+    { name: 'Contact', href: '/contact' },
   ];
+
+  const isActive = (href: string) => location.pathname === href;
 
   return (
     <nav
@@ -30,32 +35,36 @@ const Navbar = () => {
     >
       <div className="container-luxury flex items-center justify-between">
         {/* Logo */}
-        <a href="/" className="font-serif text-2xl tracking-wider text-foreground">
+        <Link to="/" className="font-serif text-2xl tracking-wider text-foreground">
           <span className="text-gold-gradient font-semibold">PIETRA</span>
           <span className="font-light"> NOBILE</span>
-        </a>
+        </Link>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-10">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.name}
-              href={link.href}
-              className="font-sans text-sm tracking-[0.15em] uppercase text-foreground/80 hover:text-gold transition-colors duration-300"
+              to={link.href}
+              className={`font-sans text-sm tracking-[0.15em] uppercase transition-colors duration-300 ${
+                isActive(link.href) 
+                  ? 'text-gold' 
+                  : 'text-foreground/80 hover:text-gold'
+              }`}
             >
               {link.name}
-            </a>
+            </Link>
           ))}
         </div>
 
         {/* Cart & Mobile Menu */}
         <div className="flex items-center gap-4">
-          <button className="relative p-2 text-foreground hover:text-gold transition-colors duration-300">
+          <Link to="/shop" className="relative p-2 text-foreground hover:text-gold transition-colors duration-300">
             <ShoppingBag size={20} strokeWidth={1.5} />
             <span className="absolute -top-1 -right-1 w-4 h-4 bg-gold text-graphite text-[10px] rounded-full flex items-center justify-center font-sans">
               0
             </span>
-          </button>
+          </Link>
 
           {/* Mobile Menu Button */}
           <button
@@ -75,14 +84,18 @@ const Navbar = () => {
       >
         <div className="container-luxury py-6 flex flex-col gap-4">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.name}
-              href={link.href}
-              className="font-sans text-sm tracking-[0.15em] uppercase text-foreground/80 hover:text-gold transition-colors duration-300 py-2"
+              to={link.href}
+              className={`font-sans text-sm tracking-[0.15em] uppercase transition-colors duration-300 py-2 ${
+                isActive(link.href) 
+                  ? 'text-gold' 
+                  : 'text-foreground/80 hover:text-gold'
+              }`}
               onClick={() => setIsMobileMenuOpen(false)}
             >
               {link.name}
-            </a>
+            </Link>
           ))}
         </div>
       </div>

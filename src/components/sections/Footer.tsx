@@ -1,19 +1,20 @@
+import { Link } from 'react-router-dom';
 import { Instagram, Facebook, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer id="contact" className="bg-graphite text-marble">
+    <footer className="bg-graphite text-marble">
       {/* Main Footer */}
       <div className="container-luxury py-16 md:py-24">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
           {/* Brand Column */}
           <div className="lg:col-span-1">
-            <a href="/" className="font-serif text-2xl tracking-wider inline-block mb-6">
+            <Link to="/" className="font-serif text-2xl tracking-wider inline-block mb-6">
               <span className="text-gold-gradient font-semibold">PIETRA</span>
               <span className="font-light"> NOBILE</span>
-            </a>
+            </Link>
             <p className="font-sans text-sm text-marble/60 leading-relaxed mb-6">
               Creăm piese de mobilier excepționale din piatră naturală, 
               îmbinând tradiția italiană cu designul contemporan.
@@ -38,33 +39,42 @@ const Footer = () => {
               Magazin
             </h4>
             <ul className="space-y-4">
-              {['Mese Dining', 'Mese Cafea', 'Design Personalizat', 'Exterior', 'Toate Produsele'].map((item) => (
-                <li key={item}>
-                  <a
-                    href="#"
+              {[
+                { name: 'Toate Produsele', href: '/shop' },
+                { name: 'Mese Dining', href: '/shop' },
+                { name: 'Mese Cafea', href: '/shop' },
+                { name: 'Design Personalizat', href: '/contact' },
+              ].map((item) => (
+                <li key={item.name}>
+                  <Link
+                    to={item.href}
                     className="font-sans text-sm text-marble/60 hover:text-gold transition-colors duration-300"
                   >
-                    {item}
-                  </a>
+                    {item.name}
+                  </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Support Column */}
+          {/* Company Column */}
           <div>
             <h4 className="font-sans text-xs tracking-[0.3em] uppercase text-gold mb-6">
-              Suport
+              Companie
             </h4>
             <ul className="space-y-4">
-              {['Întrebări Frecvente', 'Livrare & Montaj', 'Garanție', 'Îngrijire Piatră', 'Politică Retur'].map((item) => (
-                <li key={item}>
-                  <a
-                    href="#"
+              {[
+                { name: 'Despre Noi', href: '/about' },
+                { name: 'Showroom', href: '/showroom' },
+                { name: 'Contact', href: '/contact' },
+              ].map((item) => (
+                <li key={item.name}>
+                  <Link
+                    to={item.href}
                     className="font-sans text-sm text-marble/60 hover:text-gold transition-colors duration-300"
                   >
-                    {item}
-                  </a>
+                    {item.name}
+                  </Link>
                 </li>
               ))}
             </ul>

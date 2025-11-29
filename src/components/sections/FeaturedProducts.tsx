@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { ShoppingBag, Eye } from 'lucide-react';
 import diningTable from '@/assets/collection-dining-table.jpg';
 import coffeeTable from '@/assets/collection-coffee-table.jpg';
@@ -44,19 +45,20 @@ const FeaturedProducts = () => {
               Colecția Featured
             </h2>
           </div>
-          <a
-            href="#shop"
+          <Link
+            to="/shop"
             className="mt-6 md:mt-0 font-sans text-sm tracking-[0.15em] uppercase text-foreground hover:text-gold transition-colors duration-300 flex items-center gap-2"
           >
             Vezi Tot <span className="text-gold">→</span>
-          </a>
+          </Link>
         </div>
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {products.map((product, index) => (
-            <div
+            <Link
               key={product.id}
+              to={`/product/${product.id}`}
               className="group"
               style={{ animationDelay: `${index * 200}ms` }}
             >
@@ -70,12 +72,12 @@ const FeaturedProducts = () => {
                 
                 {/* Hover Actions */}
                 <div className="absolute inset-0 bg-graphite/60 opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center gap-4">
-                  <button className="w-12 h-12 rounded-full bg-marble flex items-center justify-center text-graphite hover:bg-gold hover:text-graphite transition-colors duration-300 transform translate-y-4 group-hover:translate-y-0 transition-transform">
+                  <span className="w-12 h-12 rounded-full bg-marble flex items-center justify-center text-graphite transform translate-y-4 group-hover:translate-y-0 transition-transform">
                     <Eye size={18} />
-                  </button>
-                  <button className="w-12 h-12 rounded-full bg-gold flex items-center justify-center text-graphite hover:bg-marble transition-colors duration-300 transform translate-y-4 group-hover:translate-y-0 transition-transform delay-75">
+                  </span>
+                  <span className="w-12 h-12 rounded-full bg-gold flex items-center justify-center text-graphite transform translate-y-4 group-hover:translate-y-0 transition-transform delay-75">
                     <ShoppingBag size={18} />
-                  </button>
+                  </span>
                 </div>
 
                 {/* Material Badge */}
@@ -98,7 +100,7 @@ const FeaturedProducts = () => {
                   {product.price}
                 </p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
