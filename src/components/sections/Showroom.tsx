@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import showroom1 from '@/assets/showroom-1.jpg';
 import showroom2 from '@/assets/showroom-2.jpg';
@@ -27,13 +28,13 @@ const Showroom = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <a href="#contact" className="btn-luxury-filled">
+              <Link to="/contact" className="btn-luxury-filled text-center">
                 Programează Vizită
-              </a>
-              <a href="#virtual" className="btn-luxury flex items-center justify-center gap-2">
+              </Link>
+              <Link to="/showroom" className="btn-luxury flex items-center justify-center gap-2">
                 Tur Virtual
                 <ArrowUpRight size={16} />
-              </a>
+              </Link>
             </div>
 
             {/* Stats */}

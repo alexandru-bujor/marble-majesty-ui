@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import diningTable from '@/assets/collection-dining-table.jpg';
 import coffeeTable from '@/assets/collection-coffee-table.jpg';
@@ -11,24 +12,28 @@ const collections = [
     subtitle: 'Dining Tables',
     description: 'Eleganță rafinată pentru fiecare cină în familie',
     image: diningTable,
+    href: '/shop',
   },
   {
     title: 'Mese de Cafea',
     subtitle: 'Coffee Tables',
     description: 'Piese statement pentru living-ul modern',
     image: coffeeTable,
+    href: '/shop',
   },
   {
     title: 'Design Personalizat',
     subtitle: 'Custom Marble',
     description: 'Viziunea ta, sculptată în piatră naturală',
     image: customDesign,
+    href: '/contact',
   },
   {
     title: 'Exterior Luxury',
     subtitle: 'Outdoor Stone',
     description: 'Durabilitate și stil pentru terasă',
     image: outdoorTable,
+    href: '/shop',
   },
 ];
 
@@ -74,8 +79,9 @@ const Collections = () => {
         {/* Collections Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
           {collections.map((collection, index) => (
-            <div
+            <Link
               key={collection.title}
+              to={collection.href}
               data-index={index}
               className={`collection-item group relative overflow-hidden cursor-pointer transition-all duration-700 ${
                 visibleItems.includes(index) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
@@ -118,7 +124,7 @@ const Collections = () => {
               {/* Golden corner accent */}
               <div className="absolute top-0 right-0 w-16 h-16 border-t border-r border-gold/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <div className="absolute bottom-0 left-0 w-16 h-16 border-b border-l border-gold/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            </div>
+            </Link>
           ))}
         </div>
       </div>
