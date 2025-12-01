@@ -18,6 +18,7 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Acasă', href: '/' },
     { name: 'Magazin', href: '/shop' },
+    { name: 'Configurator', href: '/configurator' },
     { name: 'Showroom', href: '/showroom' },
     { name: 'Despre Noi', href: '/about' },
     { name: 'Contact', href: '/contact' },
@@ -36,8 +37,8 @@ const Navbar = () => {
       <div className="container-luxury flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="font-serif text-2xl tracking-wider text-foreground">
-          <span className="text-gold-gradient font-semibold">PIETRA</span>
-          <span className="font-light"> NOBILE</span>
+          <span className="text-gold-gradient font-semibold">MOBART</span>
+          <span className="font-light"> </span>
         </Link>
 
         {/* Desktop Navigation */}

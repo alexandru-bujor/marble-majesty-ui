@@ -38,11 +38,9 @@ const FeaturedProducts = () => {
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-16">
           <div>
-            <p className="font-sans text-xs tracking-[0.4em] uppercase text-gold mb-4">
-              Piese Selectate
-            </p>
+
             <h2 className="font-serif text-3xl md:text-5xl text-foreground">
-              Colecția Featured
+              Colecția Actuală
             </h2>
           </div>
           <Link

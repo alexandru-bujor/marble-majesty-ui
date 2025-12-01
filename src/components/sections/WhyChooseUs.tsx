@@ -6,11 +6,7 @@ const features = [
     title: '100% Piatră Naturală',
     description: 'Folosim exclusiv marmură și granit de cea mai înaltă calitate, selectat din cele mai renumite cariere din lume.',
   },
-  {
-    icon: Palette,
-    title: 'Design Italian',
-    description: 'Fiecare piesă este proiectată de designeri italieni cu experiență în mobilierul de lux și arhitectură interioară.',
-  },
+
   {
     icon: Hand,
     title: 'Sculptat Manual',
@@ -36,7 +32,7 @@ const WhyChooseUs = () => {
             Excelență În Fiecare Detaliu
           </h2>
           <p className="font-sans text-muted-foreground max-w-2xl mx-auto">
-            De peste 15 ani, creăm piese de mobilier care definesc luxul autentic 
+           Creăm piese de mobilier care definesc luxul autentic
             și rafinamentul în designul interior
           </p>
         </div>

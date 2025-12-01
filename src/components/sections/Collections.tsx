@@ -69,10 +69,10 @@ const Collections = () => {
             Colecții Exclusive
           </p>
           <h2 className="font-serif text-3xl md:text-5xl text-foreground mb-6">
-            Mastercrafted pentru Excelenți
+            Visurile care devin realitate
           </h2>
           <p className="font-sans text-muted-foreground max-w-xl mx-auto">
-            Descoperă colecțiile noastre de piese unice, fiecare creată cu pasiune și măiestrie italiană
+            Descoperă colecțiile noastre de piese unice, fiecare creată cu pasiune și măiestrie autohtonă
           </p>
         </div>
 

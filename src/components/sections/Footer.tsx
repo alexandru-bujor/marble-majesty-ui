@@ -1,9 +1,23 @@
 import { Link } from 'react-router-dom';
-import { Instagram, Facebook, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
+import { Instagram, Facebook, Mail, Phone, MapPin } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTiktok } from '@fortawesome/free-brands-svg-icons';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
+    const socialLinks = [
+        {
+            Icon: Instagram,
+            href: "https://www.instagram.com/mobart.md?igsh=MXRlbnMxOWV3azJmdA%3D%3D&utm_source=qr",
+            label: "Instagram",
+        },
+        {
+            Icon: Facebook,
+            href: "https://www.facebook.com/share/1AEKZVuoYf/?mibextid=wwXIfr",
+            label: "Facebook",
+        },
+    ];
   return (
     <footer className="bg-graphite text-marble">
       {/* Main Footer */}
@@ -12,24 +26,31 @@ const Footer = () => {
           {/* Brand Column */}
           <div className="lg:col-span-1">
             <Link to="/" className="font-serif text-2xl tracking-wider inline-block mb-6">
-              <span className="text-gold-gradient font-semibold">PIETRA</span>
-              <span className="font-light"> NOBILE</span>
+              <span className="text-gold-gradient font-semibold">MOBART</span>
             </Link>
             <p className="font-sans text-sm text-marble/60 leading-relaxed mb-6">
               Creăm piese de mobilier excepționale din piatră naturală, 
-              îmbinând tradiția italiană cu designul contemporan.
+              îmbinând designul contemporan.
             </p>
             {/* Social Icons */}
             <div className="flex gap-4">
-              {[Instagram, Facebook, Linkedin].map((Icon, index) => (
-                <a
-                  key={index}
-                  href="#"
+                {socialLinks.map(({ Icon, href, label }) => (
+                    <a
+                        key={href}
+                        href={href}
                   className="w-10 h-10 border border-gold/30 flex items-center justify-center text-gold/70 hover:text-gold hover:border-gold transition-all duration-300"
                 >
                   <Icon size={18} strokeWidth={1.5} />
                 </a>
               ))}
+
+                <a
+
+                    href="https://www.tiktok.com/@mobart.mobilier?_r=1&_t=ZM-91qRm6pJeXL"
+                    className="w-10 h-10 border border-gold/30 flex items-center justify-center text-gold/70 hover:text-gold hover:border-gold transition-all duration-300"
+                >
+                    <FontAwesomeIcon icon={faTiktok} />
+                </a>
             </div>
           </div>
 
@@ -88,21 +109,29 @@ const Footer = () => {
             <ul className="space-y-4">
               <li>
                 <a
-                  href="mailto:contact@pietranobile.ro"
+                  href="mailto:contact@mobart.md"
                   className="font-sans text-sm text-marble/60 hover:text-gold transition-colors duration-300 flex items-center gap-3"
                 >
                   <Mail size={16} strokeWidth={1.5} className="text-gold/50" />
-                  contact@pietranobile.ro
+                    contact@mobart.md
                 </a>
               </li>
               <li>
                 <a
-                  href="tel:+40721234567"
+                  href="tel:+37379989960"
                   className="font-sans text-sm text-marble/60 hover:text-gold transition-colors duration-300 flex items-center gap-3"
                 >
                   <Phone size={16} strokeWidth={1.5} className="text-gold/50" />
-                  +40 721 234 567
-                </a>
+                  +373 799 899 60
+                </a></li>
+                <li>
+                  <a
+                      href="tel:+37379393643"
+                      className="font-sans text-sm text-marble/60 hover:text-gold transition-colors duration-300 flex items-center gap-3"
+                  >
+                      <Phone size={16} strokeWidth={1.5} className="text-gold/50" />
+                      +373 793 936 43
+                  </a>
               </li>
               <li>
                 <span className="font-sans text-sm text-marble/60 flex items-start gap-3">

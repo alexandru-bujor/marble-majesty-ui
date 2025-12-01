@@ -23,8 +23,8 @@ const About = () => {
               <span className="text-gold-gradient">În Piatră Naturală</span>
             </h1>
             <p className="font-sans text-marble/60 text-lg leading-relaxed">
-              De peste 15 ani, Pietra Nobile creează piese de mobilier excepționale, 
-              îmbinând măiestria artizanilor italieni cu cele mai fine materiale naturale din lume.
+              MobArt creează piese de mobilier excepționale,
+              îmbinând măiestria cu cele mai fine materiale naturale din lume.
             </p>
           </div>
         </div>
@@ -40,7 +40,6 @@ const About = () => {
                 alt="Atelier Pietra Nobile"
                 className="w-full aspect-[4/3] object-cover"
               />
-              <div className="absolute -bottom-8 -right-8 w-48 h-48 border border-gold/30 hidden lg:block" />
             </div>
             
             <div className="space-y-6">
@@ -51,15 +50,10 @@ const About = () => {
                 Pasiune Pentru Perfecțiune
               </h2>
               <p className="font-sans text-muted-foreground leading-relaxed">
-                Fondată în 2008, Pietra Nobile s-a născut din dorința de a aduce eleganța 
-                intemporală a pietrei naturale în casele moderne. Fondatorul nostru, 
-                Alessandro Nobile, a petrecut ani de zile studiind tehnicile tradiționale 
-                de sculptură în Italia, înainte de a deschide primul atelier în București.
+                  MobArt a luat naștere din dorința de a aduce eleganța atemporală a pietrei naturale în locuințele moderne. Ne-am propus încă de la început să transformăm materia brută într-o experiență estetică, capabilă să îmbogățească orice spațiu prin simplitate, noblețe și autenticitate.
               </p>
               <p className="font-sans text-muted-foreground leading-relaxed">
-                Astăzi, echipa noastră de meșteri artizani continuă această tradiție, 
-                creând piese unice care îmbină designul contemporan cu metodele clasice 
-                de prelucrare a pietrei.
+                  Astăzi, echipa noastră de meșteri artizani continuă această misiune, creând piese unice în care designul contemporan se împletește cu tehnicile tradiționale de prelucrare a pietrei. Fiecare creație este rezultatul unui echilibru perfect între inovație și meșteșug, oferind lucrări ce depășesc funcționalul și devin adevărate opere de artă.
               </p>
             </div>
           </div>

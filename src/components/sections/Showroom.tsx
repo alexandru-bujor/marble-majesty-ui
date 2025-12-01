@@ -27,26 +27,26 @@ const Showroom = () => {
               ghida în alegerea perfectă pentru spațiul tău.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Link to="/contact" className="btn-luxury-filled text-center">
                 Programează Vizită
               </Link>
-              <Link to="/showroom" className="btn-luxury flex items-center justify-center gap-2">
-                Tur Virtual
+              <Link to="/configurator" className="btn-luxury flex items-center justify-center gap-2">
+                Crează-ți Visul
                 <ArrowUpRight size={16} />
               </Link>
             </div>
 
-            {/* Stats */}
+            {/* Stats
             <div className="grid grid-cols-3 gap-8 pt-8 border-t border-marble/10">
               <div>
-                <p className="font-serif text-3xl md:text-4xl text-gold">15+</p>
+                <p className="font-serif text-3xl md:text-4xl text-gold">8+</p>
                 <p className="font-sans text-xs tracking-[0.2em] uppercase text-marble/50 mt-2">
                   Ani Experiență
                 </p>
               </div>
               <div>
-                <p className="font-serif text-3xl md:text-4xl text-gold">500+</p>
+                <p className="font-serif text-3xl md:text-4xl text-gold">Destule</p>
                 <p className="font-sans text-xs tracking-[0.2em] uppercase text-marble/50 mt-2">
                   Piese Create
                 </p>
@@ -57,7 +57,7 @@ const Showroom = () => {
                   Tipuri Piatră
                 </p>
               </div>
-            </div>
+            </div>*/}
           </div>
 
           {/* Right Images */}

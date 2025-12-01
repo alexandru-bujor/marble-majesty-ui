@@ -37,12 +37,7 @@ const Hero = () => {
       <div className="relative h-full flex flex-col items-center justify-center text-center px-6">
         <div className="max-w-4xl space-y-8">
           {/* Subtitle */}
-          <p
-            className="font-sans text-xs md:text-sm tracking-[0.4em] uppercase text-gold opacity-0 animate-fade-in-up"
-            style={{ animationDelay: '200ms', animationFillMode: 'forwards' }}
-          >
-            Artizanat Italian de Elită
-          </p>
+
 
           {/* Main Headline */}
           <h1
@@ -51,7 +46,7 @@ const Hero = () => {
           >
             Eleganță Sculptată
             <br />
-            <span className="text-gold-gradient">În Piatră Naturală</span>
+            <span className="text-gold-gradient">Din Piatră Naturală</span>
           </h1>
 
           {/* Subheadline */}
@@ -59,8 +54,8 @@ const Hero = () => {
             className="font-sans text-base md:text-lg text-marble/70 max-w-2xl mx-auto leading-relaxed opacity-0 animate-fade-in-up"
             style={{ animationDelay: '600ms', animationFillMode: 'forwards' }}
           >
-            Mese handmade din granit și marmură, create pentru interioare de clasă premium.
-            Fiecare piesă este o operă de artă unică.
+            Mese din granit și marmură, clasa premium.
+            Fiecare piesă, o operă de artă unică.
           </p>
 
           {/* CTA Button */}
