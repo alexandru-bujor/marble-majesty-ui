@@ -16,7 +16,22 @@ const queryClient = new QueryClient();
 
 // Get base path from Vite's import.meta.env.BASE_URL
 // This will be '/' in development and '/marble-majesty-ui/' in production
-const basename = import.meta.env.BASE_URL || '/';
+// Normalize basename: remove trailing slash and ensure it starts with /
+let basename = import.meta.env.BASE_URL || '/';
+// Remove trailing slash if present (except for root)
+if (basename !== '/' && basename.endsWith('/')) {
+  basename = basename.slice(0, -1);
+}
+// Ensure it starts with /
+if (!basename.startsWith('/')) {
+  basename = '/' + basename;
+}
+
+// Debug logging (remove in production if needed)
+if (import.meta.env.DEV) {
+  console.log('Router basename:', basename);
+  console.log('BASE_URL:', import.meta.env.BASE_URL);
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -32,6 +47,8 @@ const App = () => (
           <Route path="/contact" element={<Contact />} />
           <Route path="/showroom" element={<ShowroomPage />} />
           <Route path="/product/:id" element={<ProductDetail />} />
+          {/* Redirect root path if accessed with trailing slash */}
+          <Route path="" element={<Index />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
