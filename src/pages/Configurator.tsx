@@ -13,12 +13,12 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ShoppingBag, Download, RotateCcw } from 'lucide-react';
+import { ShoppingBag, Download, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 const Configurator = () => {
-  const [material, setMaterial] = useState('granite-white');
+  const [material, setMaterial] = useState(''); // Not used, kept for compatibility
   const [shape, setShape] = useState('rectangular');
   // Dimensions based on shape
   const [radius, setRadius] = useState([100]); // For circle
@@ -30,47 +30,23 @@ const Configurator = () => {
   const [borderRadius, setBorderRadius] = useState([0]); // Border radius for all shapes (cm)
   const [edgeProfile, setEdgeProfile] = useState('standard'); // Edge profile type
   const [thickness, setThickness] = useState(20); // Thickness in mm (20mm or 30mm)
-  const [baseStyle, setBaseStyle] = useState('base1');
-  const [materialCategory, setMaterialCategory] = useState('granite');
+  const [baseStyle, setBaseStyle] = useState('base4'); // Default to base4 (baza eleganta)
+  const [textureType, setTextureType] = useState('1');
+  const [marginProfile, setMarginProfile] = useState('simple'); // Margin profile: simple, a-little-rounded, rounded
+  const [configPanelOpen, setConfigPanelOpen] = useState(true); // Config panel visibility
 
-  // Material categories
-  const materialCategories = [
-    { value: 'marble', label: 'Marmură' },
-    { value: 'granite', label: 'Granit' },
+  // Margin profile options
+  const marginProfiles = [
+    { value: 'simple', label: 'Simplu' },
+    { value: 'a-little-rounded', label: 'Puțin Rotunjit' },
+    { value: 'rounded', label: 'Rotunjit' },
   ];
 
-  // Marble materials
-  const marbleMaterials = [
-    { value: 'carrara', label: 'Carrara', category: 'marble' },
-    { value: 'calacatta', label: 'Calacatta', category: 'marble' },
-    { value: 'statuario', label: 'Statuario', category: 'marble' },
-  ];
-
-  // Granite materials - white, dark, gray
-  const graniteMaterials = [
-    { value: 'granite-white', label: 'Granit Alb', category: 'granite' },
-    { value: 'granite-dark', label: 'Granit Închis', category: 'granite' },
-    { value: 'granite-gray', label: 'Granit Gri', category: 'granite' },
-  ];
-
-  // Filter materials based on category
-  const materials = useMemo(() => {
-    if (materialCategory === 'marble') {
-      return marbleMaterials;
-    } else {
-      return graniteMaterials;
-    }
-  }, [materialCategory]);
-
-  // Reset material when category changes
-  useEffect(() => {
-    if (materialCategory === 'marble') {
-      setMaterial(marbleMaterials[0].value);
-    } else {
-      setMaterial(graniteMaterials[0].value);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [materialCategory]);
+  // Texture type options - all 48 HEIC images
+  const textureTypes = Array.from({ length: 48 }, (_, i) => ({
+    value: String(i + 1),
+    label: String(i + 1),
+  }));
 
   const shapes = [
     { value: 'rectangular', label: 'Dreptunghiulară' },
@@ -85,6 +61,7 @@ const Configurator = () => {
     { value: 'pencil-round', label: 'Pencil Round' },
     { value: 'shark-nose', label: 'Shark Nose' },
     { value: 'bullnose', label: 'Bull Nose' },
+    { value: 'eased', label: 'Eased' },
   ];
 
   // AllInStone base styles - using their actual base names from the API
@@ -130,8 +107,7 @@ const Configurator = () => {
 
 
   const resetConfig = () => {
-    setMaterialCategory('granite');
-    setMaterial('granite-white');
+    setMaterial('');
     setShape('rectangular');
     setRadius([100]);
     setSquareLength([150]);
@@ -142,7 +118,9 @@ const Configurator = () => {
     setBorderRadius([0]);
     setEdgeProfile('standard');
     setThickness(20);
-    setBaseStyle('base1');
+    setBaseStyle('base4');
+    setTextureType('1');
+    setMarginProfile('simple');
   };
 
   // Prepare dimensions object for ModelViewer
@@ -168,202 +146,210 @@ const Configurator = () => {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     
-    // Modern header with gradient effect (simulated with rectangles)
-    doc.setFillColor(68, 68, 69); // Dark gray background
-    doc.rect(0, 0, pageWidth, 40, 'F');
+    // Modern header
+    doc.setFillColor(45, 45, 45); // Dark background
+    doc.rect(0, 0, pageWidth, 35, 'F');
     
-    // Title with modern styling
+    // Title in English
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
+    doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    const title = 'Specificații Masă Personalizată';
-    doc.text(title, pageWidth / 2, 25, { align: 'center' });
+    doc.text('Custom Table Specifications', pageWidth / 2, 22, { align: 'center' });
     
     // Reset text color
     doc.setTextColor(0, 0, 0);
     
-    // Capture 3D model view
-    let yPos = 50;
+    // Capture 3D model view - improved method
+    let yPos = 45;
     if (canvasRef.current) {
       try {
-        // Wait for rendering to complete
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait longer for rendering and texture loading
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Find the canvas element inside the container
+        // Try to find the actual Three.js canvas
         const canvasElement = canvasRef.current.querySelector('canvas') as HTMLCanvasElement;
         if (canvasElement) {
-          // Capture the canvas directly with better settings
-          const canvas = await html2canvas(canvasRef.current, {
-            backgroundColor: '#f5f5f5',
-            useCORS: true,
-            scale: 2,
-            logging: false,
-            allowTaint: true,
-            foreignObjectRendering: true,
-            removeContainer: false,
-          });
+          // Capture directly from the canvas element
+          const imgData = canvasElement.toDataURL('image/png', 1.0);
           
-          const imgData = canvas.toDataURL('image/png', 1.0);
-          
-          // Add main 3D visualization - large and prominent
-          const imgWidth = pageWidth - 40; // Full width with margins
-          const imgHeight = (canvas.height / canvas.width) * imgWidth;
-          const maxImgHeight = 120; // Maximum height for image
-          const finalImgHeight = Math.min(imgHeight, maxImgHeight);
-          const finalImgWidth = (canvas.width / canvas.height) * finalImgHeight;
+          // Calculate image dimensions - make it larger and better positioned
+          const imgWidth = pageWidth - 30; // Full width with margins
+          const aspectRatio = canvasElement.height / canvasElement.width;
+          const maxImgHeight = 100; // Maximum height for image
+          const finalImgHeight = Math.min(imgWidth * aspectRatio, maxImgHeight);
+          const finalImgWidth = finalImgHeight / aspectRatio;
           
           // Center the image
           const imgX = (pageWidth - finalImgWidth) / 2;
           
+          // Add border around image
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.5);
+          doc.roundedRect(imgX - 2, yPos - 2, finalImgWidth + 4, finalImgHeight + 4, 2, 2, 'S');
+          
           doc.addImage(imgData, 'PNG', imgX, yPos, finalImgWidth, finalImgHeight);
-          yPos += finalImgHeight + 15;
+          yPos += finalImgHeight + 20;
+        } else {
+          // Fallback: try html2canvas on the container
+          const canvas = await html2canvas(canvasRef.current, {
+            backgroundColor: '#ffffff',
+            useCORS: true,
+            scale: 2,
+            logging: false,
+            allowTaint: true,
+          });
+          
+          const imgData = canvas.toDataURL('image/png', 1.0);
+          const imgWidth = pageWidth - 30;
+          const aspectRatio = canvas.height / canvas.width;
+          const maxImgHeight = 100;
+          const finalImgHeight = Math.min(imgWidth * aspectRatio, maxImgHeight);
+          const finalImgWidth = finalImgHeight / aspectRatio;
+          const imgX = (pageWidth - finalImgWidth) / 2;
+          
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.5);
+          doc.roundedRect(imgX - 2, yPos - 2, finalImgWidth + 4, finalImgHeight + 4, 2, 2, 'S');
+          
+          doc.addImage(imgData, 'PNG', imgX, yPos, finalImgWidth, finalImgHeight);
+          yPos += finalImgHeight + 20;
         }
       } catch (error) {
         console.error('Error capturing 3D view:', error);
-        // Add placeholder text if capture fails
-        doc.setFontSize(12);
+        doc.setFontSize(11);
         doc.setTextColor(150, 150, 150);
-        doc.text('Vizualizare 3D indisponibilă', pageWidth / 2, yPos, { align: 'center' });
-        yPos += 20;
+        doc.text('3D visualization unavailable', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 15;
       }
     }
     
-    // Modern section divider
-    doc.setDrawColor(200, 200, 200);
+    // Section divider
+    doc.setDrawColor(220, 220, 220);
     doc.setLineWidth(0.5);
-    doc.line(20, yPos, pageWidth - 20, yPos);
-    yPos += 10;
+    doc.line(15, yPos, pageWidth - 15, yPos);
+    yPos += 12;
     
-    // Specifications section with modern card-like design
-    doc.setFillColor(250, 250, 250);
-    doc.roundedRect(15, yPos - 5, pageWidth - 30, 140, 3, 3, 'F');
+    // Configuration Details Section - Better Layout
+    doc.setFillColor(248, 248, 248);
+    doc.roundedRect(15, yPos - 3, pageWidth - 30, 100, 2, 2, 'F');
     
     // Section title
-    doc.setTextColor(68, 68, 69);
-    doc.setFontSize(16);
+    doc.setTextColor(45, 45, 45);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('Detalii Configurație', pageWidth / 2, yPos + 8, { align: 'center' });
-    yPos += 15;
+    doc.text('Configuration Details', 20, yPos + 8);
+    yPos += 12;
     
-    // Specifications in modern grid layout
-    doc.setFontSize(11);
-    const leftCol = 25;
-    const rightCol = pageWidth / 2 + 10;
+    // Specifications in two columns - better spacing
+    doc.setFontSize(10);
+    const leftCol = 22;
+    const rightCol = pageWidth / 2 + 5;
     let leftY = yPos;
     let rightY = yPos;
+    const lineHeight = 7;
     
     // Helper function to add text
-    const addText = (text: string, x: number, y: number, options?: { bold?: boolean; color?: [number, number, number] }) => {
+    const addText = (text: string, x: number, y: number, options?: { bold?: boolean; color?: [number, number, number]; size?: number }) => {
       if (options?.color) {
         doc.setTextColor(options.color[0], options.color[1], options.color[2]);
       }
+      if (options?.size) {
+        doc.setFontSize(options.size);
+      }
       doc.setFont('helvetica', options?.bold ? 'bold' : 'normal');
       doc.text(text, x, y);
+      doc.setFontSize(10); // Reset to default
     };
     
-    // Left column
-    addText('Material:', leftCol, leftY, { bold: true, color: [100, 100, 100] });
-    addText(materials.find(m => m.value === material)?.label || material, leftCol + 35, leftY, { color: [0, 0, 0] });
-    leftY += 8;
+    // Left column - Main specs
+    addText('Texture:', leftCol, leftY, { bold: true, color: [80, 80, 80] });
+    addText(`Texture ${textureType}`, leftCol + 28, leftY, { color: [0, 0, 0] });
+    leftY += lineHeight;
     
-    addText('Formă:', leftCol, leftY, { bold: true, color: [100, 100, 100] });
-    addText(shapes.find(s => s.value === shape)?.label || shape, leftCol + 35, leftY, { color: [0, 0, 0] });
-    leftY += 8;
+    addText('Shape:', leftCol, leftY, { bold: true, color: [80, 80, 80] });
+    const shapeLabel = shapes.find(s => s.value === shape)?.label || shape;
+    addText(shapeLabel, leftCol + 28, leftY, { color: [0, 0, 0] });
+    leftY += lineHeight;
     
-    addText('Grosime:', leftCol, leftY, { bold: true, color: [100, 100, 100] });
-    addText(`${thickness} mm`, leftCol + 35, leftY, { color: [0, 0, 0] });
-    leftY += 8;
+    addText('Thickness:', leftCol, leftY, { bold: true, color: [80, 80, 80] });
+    addText(`${thickness} mm`, leftCol + 28, leftY, { color: [0, 0, 0] });
+    leftY += lineHeight;
     
-    addText('Profil Margini:', leftCol, leftY, { bold: true, color: [100, 100, 100] });
-    addText(edgeProfiles.find(p => p.value === edgeProfile)?.label || edgeProfile, leftCol + 35, leftY, { color: [0, 0, 0] });
-    leftY += 8;
+    addText('Edge Profile:', leftCol, leftY, { bold: true, color: [80, 80, 80] });
+    addText(edgeProfiles.find(p => p.value === edgeProfile)?.label || edgeProfile, leftCol + 28, leftY, { color: [0, 0, 0] });
+    leftY += lineHeight;
     
-    addText('Bază:', leftCol, leftY, { bold: true, color: [100, 100, 100] });
-    addText(baseStyles.find(b => b.value === baseStyle)?.label || baseStyle, leftCol + 35, leftY, { color: [0, 0, 0] });
+    addText('Base:', leftCol, leftY, { bold: true, color: [80, 80, 80] });
+    addText(baseStyles.find(b => b.value === baseStyle)?.label || baseStyle, leftCol + 28, leftY, { color: [0, 0, 0] });
     
     // Right column - Dimensions
-    addText('Dimensiuni:', rightCol, rightY, { bold: true, color: [100, 100, 100] });
-    rightY += 8;
+    addText('Dimensions:', rightCol, rightY, { bold: true, color: [80, 80, 80] });
+    rightY += lineHeight;
     
     if (shape === 'round') {
-      addText(`Rază: ${radius[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
+      addText(`Radius: ${radius[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
       if (borderRadius[0] > 0) {
-        rightY += 7;
-        addText(`Rază colțuri: ${borderRadius[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
+        rightY += lineHeight;
+        addText(`Corner Radius: ${borderRadius[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
       }
     } else if (shape === 'square') {
-      addText(`Lungime: ${squareLength[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
+      addText(`Length: ${squareLength[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
       if (borderRadius[0] > 0) {
-        rightY += 7;
-        addText(`Rază colțuri: ${borderRadius[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
+        rightY += lineHeight;
+        addText(`Corner Radius: ${borderRadius[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
       }
-    } else if (shape === 'rectangular') {
-      addText(`Lungime: ${length[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
-      rightY += 7;
-      addText(`Lățime: ${width[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
+    } else if (shape === 'rectangular' || shape === 'curved-rectangular') {
+      addText(`Length: ${length[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
+      rightY += lineHeight;
+      addText(`Width: ${width[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
       if (borderRadius[0] > 0) {
-        rightY += 7;
-        addText(`Rază colțuri: ${borderRadius[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
+        rightY += lineHeight;
+        addText(`Corner Radius: ${borderRadius[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
       }
     } else if (shape === 'oval') {
-      addText(`Diametru mare: ${largestDiameter[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
-      rightY += 7;
-      addText(`Diametru mic: ${smallestDiameter[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
+      addText(`Major Diameter: ${largestDiameter[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
+      rightY += lineHeight;
+      addText(`Minor Diameter: ${smallestDiameter[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
       if (borderRadius[0] > 0) {
-        rightY += 7;
-        addText(`Rază colțuri: ${borderRadius[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
+        rightY += lineHeight;
+        addText(`Corner Radius: ${borderRadius[0]} cm`, rightCol, rightY, { color: [0, 0, 0] });
       }
     }
     
-    // Modern footer
-    yPos = pageHeight - 20;
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, yPos, pageWidth - 20, yPos);
-    yPos += 8;
+    // Footer
+    yPos = pageHeight - 15;
+    doc.setDrawColor(220, 220, 220);
+    doc.line(15, yPos, pageWidth - 15, yPos);
+    yPos += 7;
     
-    doc.setTextColor(150, 150, 150);
-    doc.setFontSize(9);
+    doc.setTextColor(120, 120, 120);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    const dateStr = new Date().toLocaleString('ro-RO', {
+    const dateStr = new Date().toLocaleString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
-    doc.text(`Generat la: ${dateStr}`, pageWidth / 2, yPos, { align: 'center' });
+    doc.text(`Generated on: ${dateStr}`, pageWidth / 2, yPos, { align: 'center' });
     
-    // Save PDF with proper encoding
-    doc.save(`specificatii-masa-${Date.now()}.pdf`);
+    // Save PDF
+    doc.save(`table-specifications-${Date.now()}.pdf`);
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen w-screen bg-background overflow-hidden flex flex-col">
       <Navbar />
       
-      {/* Hero Banner */}
-      <section className="pt-32 pb-16 bg-graphite text-marble">
-        <div className="container-luxury text-center">
-          <p className="font-sans text-xs tracking-[0.4em] uppercase text-gold mb-4">
-            Design Personalizat
-          </p>
-          <h1 className="font-serif text-4xl md:text-6xl mb-6">
-            Configurator Mese
-          </h1>
-          <p className="font-sans text-marble/60 max-w-xl mx-auto">
-            Creează masa perfectă potrivită pentru spațiul tău
-          </p>
-        </div>
-      </section>
-
-      {/* Configurator Section */}
-      <section className="section-padding">
-        <div className="container-luxury">
-          {/* 3D Model Viewer - Full Width on Top */}
-          <div className="mb-8">
-            <Card className="border-border overflow-hidden">
-              <CardContent className="p-0">
-                <div ref={canvasRef} className="aspect-video w-full min-h-[500px] lg:min-h-[600px]">
+      {/* Configurator Section - Full Screen */}
+      <section className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col">
+          {/* 3D Model Viewer - Full Screen */}
+          <div className="flex-1 min-h-0">
+            <Card className="border-border overflow-hidden h-full">
+              <CardContent className="p-0 h-full">
+                <div ref={canvasRef} className="w-full h-full">
                   <Suspense fallback={
                     <div className="w-full h-full flex items-center justify-center bg-secondary/10">
                       <div className="text-center p-8">
@@ -382,6 +368,7 @@ const Configurator = () => {
                           dimensions={dimensions}
                           edgeProfile={edgeProfile}
                           thickness={thickness / 1000} // Convert mm to meters
+                          textureType={textureType}
                       />
                   </Suspense>
                 </div>
@@ -389,85 +376,180 @@ const Configurator = () => {
             </Card>
           </div>
 
-          {/* Configuration Panel - Below Viewer */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Material Category Selection */}
-            <Card className="border-border">
-              <CardContent className="p-6 space-y-4">
-                <label className="font-sans text-sm tracking-[0.15em] uppercase text-foreground mb-3 block">
-                  Tip Material
-                </label>
-                <Select value={materialCategory} onValueChange={setMaterialCategory}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {materialCategories.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
+          {/* Toggle Button - Mobile Optimized */}
+          <button
+            onClick={() => setConfigPanelOpen(!configPanelOpen)}
+            className="absolute bottom-0 left-1/2 transform -translate-x-1/2 z-50 bg-background/95 backdrop-blur-sm border border-border border-b-0 rounded-t-lg px-4 md:px-6 py-2 md:py-2.5 flex items-center gap-2 hover:bg-background transition-colors shadow-lg"
+          >
+            <span className="font-sans text-[10px] md:text-xs tracking-[0.1em] md:tracking-[0.15em] uppercase text-foreground hidden sm:inline">
+              {configPanelOpen ? 'Ascunde' : 'Afișează'}
+            </span>
+            <span className="font-sans text-[10px] md:text-xs tracking-[0.1em] md:tracking-[0.15em] uppercase text-foreground hidden md:inline">
+              {configPanelOpen ? ' Configurații' : ' Configurații'}
+            </span>
+            {configPanelOpen ? <ChevronDown size={18} className="sm:w-4 sm:h-4 md:w-4 md:h-4" /> : <ChevronUp size={18} className="sm:w-4 sm:h-4 md:w-4 md:h-4" />}
+          </button>
 
-            {/* Material Selection */}
-            <Card className="border-border">
-              <CardContent className="p-6 space-y-4">
-                <label className="font-sans text-sm tracking-[0.15em] uppercase text-foreground mb-3 block">
-                  Material
-                </label>
-                <Select value={material} onValueChange={setMaterial}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {materials.map((mat) => (
-                      <SelectItem key={mat.value} value={mat.value}>
-                        {mat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-
-              {/* Shape Selection */}
-              <Card className="border-border">
-                <CardContent className="p-6 space-y-4">
-                  <label className="font-sans text-sm tracking-[0.15em] uppercase text-foreground mb-3 block">
+          {/* Configuration Panel - Overlay on bottom - Mobile Optimized */}
+          <div className={`absolute bottom-0 left-0 right-0 bg-background/98 backdrop-blur-md border-t border-border transition-transform duration-300 max-h-[85vh] overflow-y-auto ${
+            configPanelOpen ? 'translate-y-0' : 'translate-y-full'
+          }`}>
+            <div className="p-4 md:p-6 pb-6 md:pb-6">
+              <div className="container-luxury max-w-7xl mx-auto">
+                {/* Mobile: Single column, Desktop: Grid */}
+                <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-3">
+              {/* Shape Selection - First */}
+              <Card className="border-border shadow-sm">
+                <CardContent className="p-5 md:p-4 space-y-3">
+                  <label className="font-sans text-sm md:text-xs tracking-[0.15em] uppercase text-foreground mb-3 md:mb-2 block font-medium">
                     Formă
                   </label>
                   <Select value={shape} onValueChange={setShape}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full h-12 md:h-10 text-base md:text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {shapes.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
+                        <SelectItem key={s.value} value={s.value} className="text-base md:text-sm py-3 md:py-2">
                           {s.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </CardContent>
+              </Card>
+
+            {/* Texture Type Selection */}
+            <Card className="border-border shadow-sm">
+              <CardContent className="p-5 md:p-4 space-y-3">
+                <label className="font-sans text-sm md:text-xs tracking-[0.15em] uppercase text-foreground mb-3 md:mb-2 block font-medium">
+                  Textură
+                </label>
+                <Select value={textureType} onValueChange={setTextureType}>
+                  <SelectTrigger className="w-full h-12 md:h-10 text-base md:text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[60vh]">
+                    {textureTypes.map((tex) => (
+                      <SelectItem key={tex.value} value={tex.value} className="text-base md:text-sm py-3 md:py-2">
+                        {tex.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
             </Card>
 
-            {/* Dimensions - Shape Specific - Full Width */}
-            <Card className="border-border md:col-span-2 lg:col-span-4">
-              <CardContent className="p-6 space-y-6">
-                <h3 className="font-sans text-sm tracking-[0.15em] uppercase text-foreground">
+            {/* Thickness - Mobile Optimized */}
+            <Card className="border-border shadow-sm">
+              <CardContent className="p-5 md:p-4 space-y-3">
+                <label className="font-sans text-sm md:text-xs tracking-[0.15em] uppercase text-foreground mb-3 md:mb-2 block font-medium">
+                  Grosime (mm)
+                </label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setThickness(20)}
+                    className={`flex-1 px-4 py-3 md:py-2 rounded-lg border-2 transition-all text-base md:text-sm font-medium min-h-[48px] md:min-h-0 ${
+                      thickness === 20
+                        ? 'bg-foreground text-background border-foreground shadow-md scale-[1.02]'
+                        : 'bg-background text-foreground border-border hover:bg-secondary active:scale-[0.98]'
+                    }`}
+                  >
+                    20mm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setThickness(30)}
+                    className={`flex-1 px-4 py-3 md:py-2 rounded-lg border-2 transition-all text-base md:text-sm font-medium min-h-[48px] md:min-h-0 ${
+                      thickness === 30
+                        ? 'bg-foreground text-background border-foreground shadow-md scale-[1.02]'
+                        : 'bg-background text-foreground border-border hover:bg-secondary active:scale-[0.98]'
+                    }`}
+                  >
+                    30mm
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Edge Profile */}
+            <Card className="border-border shadow-sm">
+              <CardContent className="p-5 md:p-4 space-y-3">
+                <label className="font-sans text-sm md:text-xs tracking-[0.15em] uppercase text-foreground mb-3 md:mb-2 block font-medium">
+                  Profil Margini
+                </label>
+                <Select value={edgeProfile} onValueChange={setEdgeProfile}>
+                  <SelectTrigger className="w-full h-12 md:h-10 text-base md:text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {edgeProfiles.map((ep) => (
+                      <SelectItem key={ep.value} value={ep.value} className="text-base md:text-sm py-3 md:py-2">
+                        {ep.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+
+            {/* Margin Profile Selection */}
+            <Card className="border-border shadow-sm">
+              <CardContent className="p-5 md:p-4 space-y-3">
+                <label className="font-sans text-sm md:text-xs tracking-[0.15em] uppercase text-foreground mb-3 md:mb-2 block font-medium">
+                  Profil Margine
+                </label>
+                <Select value={marginProfile} onValueChange={setMarginProfile}>
+                  <SelectTrigger className="w-full h-12 md:h-10 text-base md:text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {marginProfiles.map((mp) => (
+                      <SelectItem key={mp.value} value={mp.value} className="text-base md:text-sm py-3 md:py-2">
+                        {mp.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+
+            {/* Base Style */}
+            <Card className="border-border shadow-sm">
+              <CardContent className="p-5 md:p-4 space-y-3">
+                <label className="font-sans text-sm md:text-xs tracking-[0.15em] uppercase text-foreground mb-3 md:mb-2 block font-medium">
+                  Bază
+                </label>
+                <Select value={baseStyle} onValueChange={setBaseStyle}>
+                  <SelectTrigger className="w-full h-12 md:h-10 text-base md:text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {baseStyles.map((bs) => (
+                      <SelectItem key={bs.value} value={bs.value} className="text-base md:text-sm py-3 md:py-2">
+                        {bs.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+
+            {/* Dimensions - Shape Specific - Full Width - Mobile Optimized */}
+            <Card className="border-border shadow-sm md:col-span-2 lg:col-span-3 xl:col-span-4">
+              <CardContent className="p-5 md:p-6 space-y-5 md:space-y-6">
+                <h3 className="font-sans text-base md:text-sm tracking-[0.15em] uppercase text-foreground font-semibold mb-4 md:mb-0">
                   Dimensiuni (cm)
                 </h3>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-5 md:space-y-4">
                     {/* Circle: Radius */}
                     {shape === 'round' && (
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="font-sans text-xs text-muted-foreground">Rază</span>
-                          <span className="font-sans text-xs text-foreground">{radius[0]} cm</span>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Rază</span>
+                          <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{radius[0]} cm</span>
                         </div>
                         <Slider
                           value={radius}
@@ -482,10 +564,10 @@ const Configurator = () => {
 
                     {/* Square: Length */}
                     {shape === 'square' && (
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="font-sans text-xs text-muted-foreground">Lungime</span>
-                          <span className="font-sans text-xs text-foreground">{squareLength[0]} cm</span>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Lungime</span>
+                          <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{squareLength[0]} cm</span>
                         </div>
                         <Slider
                           value={squareLength}
@@ -501,10 +583,10 @@ const Configurator = () => {
                     {/* Rectangular: Length and Width */}
                     {shape === 'rectangular' && (
                       <>
-                        <div>
-                          <div className="flex justify-between mb-2">
-                            <span className="font-sans text-xs text-muted-foreground">Lungime</span>
-                            <span className="font-sans text-xs text-foreground">{length[0]} cm</span>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Lungime</span>
+                            <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{length[0]} cm</span>
                           </div>
                           <Slider
                             value={length}
@@ -515,10 +597,10 @@ const Configurator = () => {
                             className="w-full"
                           />
                         </div>
-                        <div>
-                          <div className="flex justify-between mb-2">
-                            <span className="font-sans text-xs text-muted-foreground">Lățime</span>
-                            <span className="font-sans text-xs text-foreground">{width[0]} cm</span>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Lățime</span>
+                            <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{width[0]} cm</span>
                           </div>
                           <Slider
                             value={width}
@@ -533,10 +615,10 @@ const Configurator = () => {
                     )}
 
                     {/* Border Radius - Available for all shapes */}
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="font-sans text-xs text-muted-foreground">Rază Colțuri</span>
-                        <span className="font-sans text-xs text-foreground">{borderRadius[0]} cm</span>
+                    <div className="space-y-3 pt-2 border-t border-border/50">
+                      <div className="flex justify-between items-center">
+                        <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Rază Colțuri</span>
+                        <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{borderRadius[0]} cm</span>
                       </div>
                       <Slider
                         value={borderRadius}
@@ -551,10 +633,10 @@ const Configurator = () => {
                     {/* Oval: Largest and Smallest Diameter */}
                     {shape === 'oval' && (
                       <>
-                        <div>
-                          <div className="flex justify-between mb-2">
-                            <span className="font-sans text-xs text-muted-foreground">Diametru Mare</span>
-                            <span className="font-sans text-xs text-foreground">{largestDiameter[0]} cm</span>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Diametru Mare</span>
+                            <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{largestDiameter[0]} cm</span>
                           </div>
                           <Slider
                             value={largestDiameter}
@@ -565,10 +647,10 @@ const Configurator = () => {
                             className="w-full"
                           />
                         </div>
-                        <div>
-                          <div className="flex justify-between mb-2">
-                            <span className="font-sans text-xs text-muted-foreground">Diametru Mic</span>
-                            <span className="font-sans text-xs text-foreground">{smallestDiameter[0]} cm</span>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Diametru Mic</span>
+                            <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{smallestDiameter[0]} cm</span>
                           </div>
                           <Slider
                             value={smallestDiameter}
@@ -586,148 +668,74 @@ const Configurator = () => {
                 </CardContent>
             </Card>
 
-            {/* Thickness */}
-            <Card className="border-border">
-              <CardContent className="p-6 space-y-4">
-                <label className="font-sans text-sm tracking-[0.15em] uppercase text-foreground mb-3 block">
-                  Grosime (mm)
-                </label>
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setThickness(20)}
-                    className={`flex-1 px-4 py-2 rounded border transition-colors ${
-                      thickness === 20
-                        ? 'bg-foreground text-background border-foreground'
-                        : 'bg-background text-foreground border-border hover:bg-secondary'
-                    }`}
-                  >
-                    20mm
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setThickness(30)}
-                    className={`flex-1 px-4 py-2 rounded border transition-colors ${
-                      thickness === 30
-                        ? 'bg-foreground text-background border-foreground'
-                        : 'bg-background text-foreground border-border hover:bg-secondary'
-                    }`}
-                  >
-                    30mm
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Edge Profile */}
-            <Card className="border-border">
-              <CardContent className="p-6 space-y-4">
-                <label className="font-sans text-sm tracking-[0.15em] uppercase text-foreground mb-3 block">
-                  Profil Margini
-                </label>
-                <Select value={edgeProfile} onValueChange={setEdgeProfile}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {edgeProfiles.map((profile) => (
-                      <SelectItem key={profile.value} value={profile.value}>
-                        {profile.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-
-            {/* Base Style */}
-            <Card className="border-border">
-                <CardContent className="p-6 space-y-4">
-                  <label className="font-sans text-sm tracking-[0.15em] uppercase text-foreground mb-3 block">
-                    Stil Bază
-                  </label>
-                  <Select value={baseStyle} onValueChange={setBaseStyle}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                    {baseStyles.map((base) => (
-                      <SelectItem key={base.value} value={base.value}>
-                        {base.label} {base.isRound && '🔵'}
-                      </SelectItem>
-                    ))}
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
-
-            {/* Summary & Actions - Full Width */}
-            <Card className="border-border md:col-span-2 lg:col-span-4">
-              <CardContent className="p-6 space-y-6">
-                <h3 className="font-serif text-2xl text-foreground mb-4">
+            {/* Summary & Actions - Full Width - Mobile Optimized */}
+            <Card className="border-border shadow-sm md:col-span-2 lg:col-span-3 xl:col-span-4">
+              <CardContent className="p-5 md:p-6 space-y-5 md:space-y-6">
+                <h3 className="font-serif text-xl md:text-2xl text-foreground mb-4 font-semibold">
                   Rezumat Configurație
                 </h3>
 
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="font-sans text-muted-foreground">Material</span>
-                      <span className="font-sans text-foreground">
-                        {materials.find(m => m.value === material)?.label}
+                  <div className="space-y-3 md:space-y-2.5 text-sm">
+                    <div className="flex justify-between items-center py-2 border-b border-border/30">
+                      <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Textură</span>
+                      <span className="font-sans text-base md:text-sm text-foreground font-semibold">
+                        Textură {textureType}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="font-sans text-muted-foreground">Formă</span>
-                      <span className="font-sans text-foreground">
+                    <div className="flex justify-between items-center py-2 border-b border-border/30">
+                      <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Formă</span>
+                      <span className="font-sans text-base md:text-sm text-foreground font-semibold">
                         {shapes.find(s => s.value === shape)?.label}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="font-sans text-muted-foreground">Dimensiuni</span>
-                      <span className="font-sans text-foreground">
+                    <div className="flex justify-between items-start py-2 border-b border-border/30">
+                      <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Dimensiuni</span>
+                      <span className="font-sans text-base md:text-sm text-foreground font-semibold text-right max-w-[60%]">
                         {shape === 'round' && `${radius[0]} cm (rază)`}
                         {shape === 'square' && `${squareLength[0]} cm`}
-                        {(shape === 'rectangular' || shape === 'curved-rectangular') && `${length[0]} cm${borderRadius[0] > 0 ? ` (rază colțuri: ${borderRadius[0]} cm)` : ''}`}
-                        {shape === 'oval' && `Diametru mare: ${largestDiameter[0]} cm, Diametru mic: ${smallestDiameter[0]} cm`}
+                        {(shape === 'rectangular' || shape === 'curved-rectangular') && `${length[0]} × ${width[0]} cm`}
+                        {shape === 'oval' && `${largestDiameter[0]} × ${smallestDiameter[0]} cm`}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="font-sans text-muted-foreground">Bază</span>
-                      <span className="font-sans text-foreground">
+                    <div className="flex justify-between items-center py-2">
+                      <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Bază</span>
+                      <span className="font-sans text-base md:text-sm text-foreground font-semibold">
                         {baseStyles.find(b => b.value === baseStyle)?.label}
                       </span>
                     </div>
                   </div>
 
 
-                  <div className="space-y-3">
-                    <Button className="w-full btn-luxury-filled flex items-center justify-center gap-2">
-                      <ShoppingBag size={18} />
+                  <div className="space-y-3 pt-2">
+                    <Button className="w-full btn-luxury-filled flex items-center justify-center gap-2 h-12 md:h-10 text-base md:text-sm font-medium">
+                      <ShoppingBag size={20} className="md:w-4 md:h-4" />
                       Adaugă în Coș
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full flex items-center justify-center gap-2"
+                      className="w-full flex items-center justify-center gap-2 h-12 md:h-10 text-base md:text-sm font-medium border-2"
                       onClick={downloadPDF}
                     >
-                      <Download size={18} />
+                      <Download size={20} className="md:w-4 md:h-4" />
                       Descarcă Specificații
                     </Button>
                     <Button
                       variant="ghost"
-                      className="w-full flex items-center justify-center gap-2"
+                      className="w-full flex items-center justify-center gap-2 h-12 md:h-10 text-base md:text-sm font-medium"
                       onClick={resetConfig}
                     >
-                      <RotateCcw size={18} />
+                      <RotateCcw size={20} className="md:w-4 md:h-4" />
                       Resetează
                     </Button>
                   </div>
                 </CardContent>
             </Card>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 };

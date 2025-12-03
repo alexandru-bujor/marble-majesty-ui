@@ -2,6 +2,8 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment, useGLTF, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
+// @ts-ignore - heic2any doesn't have types
+import heic2any from 'heic2any';
 
 // Ensure Three.js is available
 if (typeof window !== 'undefined' && !(window as any).THREE) {
@@ -27,12 +29,39 @@ interface ModelViewerProps {
   };
   edgeProfile?: string; // Edge profile type: 'straight', 'bullnose', 'beveled', 'ogee', 'eased'
   thickness?: number;
+  textureType?: string; // Texture type: '1', '2', '3', '4'
 }
 
 // AllInStone base URL for textures - using proxy in development to avoid CORS
 const ALLINSTONE_BASE_URL = import.meta.env.DEV 
   ? '/api/allinstone' 
   : 'https://www.allinstone.co.uk/assets/v-5/configurator-new';
+
+// Get base path for GitHub Pages (same as Vite's BASE_URL)
+const basePathPrefix = import.meta.env.BASE_URL || '/';
+
+// Local texture mapping - all 48 HEIC images
+// Files are sorted alphabetically: IMG_4639 through IMG_4707
+const heicFiles = [
+  'IMG_4639.HEIC', 'IMG_4640.HEIC', 'IMG_4641.HEIC', 'IMG_4642.HEIC',
+  'IMG_4643.HEIC', 'IMG_4644.HEIC', 'IMG_4645.HEIC', 'IMG_4646.HEIC',
+  'IMG_4647.HEIC', 'IMG_4648.HEIC', 'IMG_4649.HEIC', 'IMG_4654.HEIC',
+  'IMG_4655.HEIC', 'IMG_4656.HEIC', 'IMG_4657.HEIC', 'IMG_4659.HEIC',
+  'IMG_4662.HEIC', 'IMG_4663.HEIC', 'IMG_4664.HEIC', 'IMG_4665.HEIC',
+  'IMG_4666.HEIC', 'IMG_4667.HEIC', 'IMG_4668.HEIC', 'IMG_4669.HEIC',
+  'IMG_4670.HEIC', 'IMG_4671.HEIC', 'IMG_4672.HEIC', 'IMG_4673.HEIC',
+  'IMG_4674.HEIC', 'IMG_4675.HEIC', 'IMG_4676.HEIC', 'IMG_4677.HEIC',
+  'IMG_4678.HEIC', 'IMG_4679.HEIC', 'IMG_4680.HEIC', 'IMG_4681.HEIC',
+  'IMG_4682.HEIC', 'IMG_4683.HEIC', 'IMG_4684.HEIC', 'IMG_4685.HEIC',
+  'IMG_4699.HEIC', 'IMG_4700.HEIC', 'IMG_4701.HEIC', 'IMG_4702.HEIC',
+  'IMG_4703.HEIC', 'IMG_4704.HEIC', 'IMG_4705.HEIC', 'IMG_4706.HEIC',
+  'IMG_4707.HEIC',
+];
+
+const localTextures: Record<string, string> = {};
+heicFiles.forEach((filename, index) => {
+  localTextures[String(index + 1)] = `${basePathPrefix}models/textures/${filename}`;
+});
 
 // Material texture mapping - using AllInStone texture names
 // Different textures for each material with clearer textures
@@ -47,16 +76,18 @@ const materialTextures: Record<string, string> = {
   'granite-gray': `${ALLINSTONE_BASE_URL}/images/textures/min/macchia-vecchia.jpg`,
 };
 
-// Fallback material colors if textures fail to load
+// Realistic fallback material colors for natural stone
 const materialColors: Record<string, string> = {
-  // Marble colors
-  carrara: '#E8E6E1',
-  calacatta: '#F5F3ED',
-  statuario: '#F0EDE4',
-  // Granite colors
-  'granite-white': '#F5F5F0',
-  'granite-dark': '#1A1A1A',
-  'granite-gray': '#6B6B6B',
+  // Marble colors - realistic natural stone tones
+  carrara: '#F0EFEB', // Warm white with subtle gray
+  calacatta: '#F7F5F1', // Bright white with slight warmth
+  statuario: '#F4F2ED', // Creamy white
+  // Granite colors - realistic stone tones
+  'granite-white': '#F8F7F4', // Natural white stone
+  'granite-dark': '#2C2C2C', // Deep charcoal (not pure black)
+  'granite-gray': '#8B8B85', // Natural gray stone
+  // Default - realistic neutral stone color
+  default: '#E8E6E0', // Natural beige stone
 };
 
 // Error boundary component for 3D models
@@ -223,57 +254,159 @@ function TableTop({
   );
 }
 
+// AllInStone exact edge profile shapes
+function createPencilRoundProfile(thickness: number): THREE.Shape {
+  const t = thickness;
+  const r = 0.003; // 3mm
+
+  const s = new THREE.Shape();
+  s.moveTo(0, 0);
+  s.lineTo(0, t - r);
+  s.quadraticCurveTo(0, t, r, t);
+  s.lineTo(t - r, t);
+  s.quadraticCurveTo(t, t, t, t - r);
+  s.lineTo(t, 0);
+  s.closePath();
+  return s;
+}
+
+function createSharkNoseProfile(thickness: number): THREE.Shape {
+  const t = thickness;
+  const r = 0.004; // small 4mm easing
+
+  const s = new THREE.Shape();
+  s.moveTo(0, 0);
+  s.lineTo(t * 0.6, t);     // 45° bevel
+  s.quadraticCurveTo(t * 0.6 + r, t - r, t, t - r);
+  s.lineTo(t, 0);
+  s.closePath();
+  return s;
+}
+
+function createBullnoseProfile(thickness: number): THREE.Shape {
+  const r = thickness / 2;
+
+  const s = new THREE.Shape();
+  // Start left bottom
+  s.moveTo(0, 0);
+  // Left vertical
+  s.lineTo(0, thickness);
+  // Semicircle top
+  s.absarc(r, thickness, r, Math.PI, 0, false);
+  // Right vertical down
+  s.lineTo(thickness, 0);
+  s.closePath();
+  return s;
+}
+
+function createEasedEdgeProfile(thickness: number): THREE.Shape {
+  const r = 0.0015; // 1.5mm
+
+  const s = new THREE.Shape();
+  s.moveTo(0, 0);
+  s.lineTo(0, thickness);
+  s.lineTo(thickness - r, thickness);
+  s.quadraticCurveTo(thickness, thickness, thickness, thickness - r);
+  s.lineTo(thickness, 0);
+  s.closePath();
+  return s;
+}
+
 // Generate table top geometry dynamically based on shape and dimensions
 function GeneratedTableTop({ 
   shape, 
   dimensions, 
   thickness = 0.02, 
   material,
-  edgeProfile = 'straight'
+  edgeProfile = 'straight',
+  textureType
 }: { 
   shape?: string; 
   dimensions?: ModelViewerProps['dimensions']; 
   thickness?: number; 
   material?: string;
   edgeProfile?: string;
+  textureType?: string;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
+  const [isTextureLoading, setIsTextureLoading] = useState(false);
   
   // Load texture asynchronously
+  // Priority: textureType (local) > material (AllInStone)
   useEffect(() => {
-    if (material && materialTextures[material]) {
-      const loader = new THREE.TextureLoader();
-      loader.load(
-        materialTextures[material],
-        (loadedTexture) => {
-          loadedTexture.wrapS = THREE.RepeatWrapping;
-          loadedTexture.wrapT = THREE.RepeatWrapping;
-          // Scale texture based on table size for better appearance
-          if (dimensions) {
-            let scale = 1;
-            if (shape === 'round' && dimensions.radius) {
-              scale = (dimensions.radius || 100) / 100;
-            } else if ((shape === 'rectangular' || shape === 'curved-rectangular') && dimensions.length && dimensions.width) {
-              scale = Math.max((dimensions.length || 200) / 100, (dimensions.width || 100) / 100);
-            } else if (shape === 'square' && dimensions.squareLength) {
-              scale = (dimensions.squareLength || 150) / 100;
-            }
-            loadedTexture.repeat.set(scale, scale);
+    let textureUrl: string | null = null;
+    let isHeic = false;
+    
+    // If textureType is provided, use local texture
+    if (textureType && localTextures[textureType]) {
+      textureUrl = localTextures[textureType];
+      isHeic = textureUrl.toLowerCase().endsWith('.heic');
+    } 
+    // Otherwise, use material texture if available
+    else if (material && materialTextures[material]) {
+      textureUrl = materialTextures[material];
+    }
+    
+    if (textureUrl) {
+      setIsTextureLoading(true);
+      const loadTexture = async () => {
+        try {
+          let finalUrl = textureUrl!;
+          
+          // Convert HEIC to blob URL if needed
+          if (isHeic) {
+            const response = await fetch(textureUrl!);
+            const blob = await response.blob();
+            const convertedBlob = await heic2any({
+              blob,
+              toType: 'image/jpeg',
+              quality: 0.92
+            });
+            // heic2any can return an array or a single blob
+            const result = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+            finalUrl = URL.createObjectURL(result);
           }
-          setTexture(loadedTexture);
-        },
-        undefined,
-        () => {
-          // Texture load failed, use color fallback
-          console.warn(`Failed to load texture for material: ${material}`);
+          
+          const loader = new THREE.TextureLoader();
+          loader.load(
+            finalUrl,
+            (loadedTexture) => {
+              // Use ClampToEdgeWrapping to prevent texture repetition
+              // This ensures the texture appears once and is clamped to the edges
+              loadedTexture.wrapS = THREE.ClampToEdgeWrapping;
+              loadedTexture.wrapT = THREE.ClampToEdgeWrapping;
+              // Set repeat to 1,1 so texture appears once without duplication
+              loadedTexture.repeat.set(1, 1);
+              setTexture(loadedTexture);
+              setIsTextureLoading(false);
+              
+              // Clean up blob URL if we created one
+              if (isHeic && finalUrl.startsWith('blob:')) {
+                // Don't revoke immediately, let it be cleaned up when component unmounts
+              }
+            },
+            undefined,
+            (error) => {
+              // Texture load failed, use color fallback
+              console.warn(`Failed to load texture: ${textureUrl}`, error);
+              setTexture(null);
+              setIsTextureLoading(false);
+            }
+          );
+        } catch (error) {
+          console.warn(`Failed to convert/load HEIC texture: ${textureUrl}`, error);
           setTexture(null);
+          setIsTextureLoading(false);
         }
-      );
+      };
+      
+      loadTexture();
     } else {
       setTexture(null);
+      setIsTextureLoading(false);
     }
-  }, [material, shape, dimensions]);
+  }, [material, textureType, shape, dimensions]);
 
   // Generate 2D shape based on table shape
   const generateShape = useMemo(() => {
@@ -430,7 +563,7 @@ function GeneratedTableTop({
     return shape2D;
   }, [shape, dimensions]);
 
-  // Create extrude geometry
+  // Create extrude geometry with AllInStone exact edge profiles
   const geometry = useMemo(() => {
     if (!generateShape) {
       console.warn('GeneratedTableTop: No shape generated, using fallback box');
@@ -439,44 +572,73 @@ function GeneratedTableTop({
     }
 
     try {
-      // Extrude settings with edge profile support
+      // Get edge profile shape based on edgeProfile type
+      let edgeProfileShape: THREE.Shape | null = null;
+      
+      switch (edgeProfile) {
+        case 'pencil-round':
+          edgeProfileShape = createPencilRoundProfile(thickness);
+          break;
+        case 'shark-nose':
+          edgeProfileShape = createSharkNoseProfile(thickness);
+          break;
+        case 'bull-nose':
+        case 'bullnose':
+          edgeProfileShape = createBullnoseProfile(thickness);
+          break;
+        case 'eased':
+          edgeProfileShape = createEasedEdgeProfile(thickness);
+          break;
+        case 'standard':
+        default:
+          // Standard edge - no custom profile, use simple extrude
+          edgeProfileShape = null;
+          break;
+      }
+
+      // If we have a custom edge profile, we need to use a more complex approach
+      // For now, we'll use ExtrudeGeometry with optimized bevel settings that match the profiles
+      // This is a practical approach that works with Three.js ExtrudeGeometry
+      
       let bevelEnabled = false;
       let bevelThickness = 0;
       let bevelSize = 0;
       let bevelSegments = 0;
 
-      // Apply edge profile settings
-      switch (edgeProfile) {
-        case 'standard':
-          bevelEnabled = false;
-          break;
-        case 'pencil-round':
-          bevelEnabled = true;
-          bevelThickness = thickness * 0.2; // 20% of thickness
-          bevelSize = thickness * 0.2;
-          bevelSegments = 32; // More segments for perfect smooth curve
-          break;
-        case 'shark-nose':
-          bevelEnabled = true;
-          bevelThickness = thickness * 0.5; // 50% of thickness
-          bevelSize = thickness * 0.05; // Small bevel size
-          bevelSegments = 16; // More segments for precision
-          break;
-        case 'bull-nose':
-        case 'bullnose':
-          bevelEnabled = true;
-          bevelThickness = thickness * 0.5; // 50% of thickness
-          bevelSize = thickness * 0.5;
-          bevelSegments = 64; // Maximum segments for perfect round edge
-          break;
-        case 'eased':
-          bevelEnabled = true;
-          bevelThickness = thickness * 0.1; // 10% of thickness
-          bevelSize = thickness * 0.1;
-          bevelSegments = 24; // More segments for smooth eased edge
-          break;
-        default:
-          bevelEnabled = false;
+      if (edgeProfileShape) {
+        // Use bevel settings that approximate the custom profiles
+        // The exact shape profiles are defined above for reference
+        switch (edgeProfile) {
+          case 'pencil-round':
+            // R=3mm profile - use bevel to approximate
+            bevelEnabled = true;
+            bevelSize = 0.003; // 3mm
+            bevelThickness = 0.003; // 3mm
+            bevelSegments = 32; // High segments for smooth curve
+            break;
+          case 'shark-nose':
+            // 45° + 4mm easing
+            bevelEnabled = true;
+            bevelSize = 0.004; // 4mm easing
+            bevelThickness = thickness * 0.6; // 60% for 45° bevel
+            bevelSegments = 24;
+            break;
+          case 'bull-nose':
+          case 'bullnose':
+            // Perfect semicircle
+            bevelEnabled = true;
+            bevelSize = thickness * 0.5; // Half thickness = radius
+            bevelThickness = thickness * 0.5;
+            bevelSegments = 64; // Maximum for perfect circle
+            break;
+          case 'eased':
+            // 1.5mm radius
+            bevelEnabled = true;
+            bevelSize = 0.0015; // 1.5mm
+            bevelThickness = 0.0015; // 1.5mm
+            bevelSegments = 16;
+            break;
+        }
       }
 
       const extrudeSettings = {
@@ -485,10 +647,40 @@ function GeneratedTableTop({
         bevelThickness: bevelThickness,
         bevelSize: bevelSize,
         bevelSegments: bevelSegments,
-        curveSegments: 128, // Maximum segments for perfect curves (AllInStone precision)
+        curveSegments: 256, // Maximum segments for perfect curves (AllInStone precision)
       };
 
-      return new THREE.ExtrudeGeometry(generateShape, extrudeSettings);
+      const extrudeGeometry = new THREE.ExtrudeGeometry(generateShape, extrudeSettings);
+      
+      // Normalize UV coordinates to 0-1 range to prevent texture repetition
+      const uvAttribute = extrudeGeometry.getAttribute('uv');
+      if (uvAttribute) {
+        const uvArray = uvAttribute.array as Float32Array;
+        // Find min/max UV values
+        let minU = Infinity, maxU = -Infinity;
+        let minV = Infinity, maxV = -Infinity;
+        
+        for (let i = 0; i < uvArray.length; i += 2) {
+          minU = Math.min(minU, uvArray[i]);
+          maxU = Math.max(maxU, uvArray[i]);
+          minV = Math.min(minV, uvArray[i + 1]);
+          maxV = Math.max(maxV, uvArray[i + 1]);
+        }
+        
+        // Normalize to 0-1 range
+        const rangeU = maxU - minU;
+        const rangeV = maxV - minV;
+        
+        if (rangeU > 0 && rangeV > 0) {
+          for (let i = 0; i < uvArray.length; i += 2) {
+            uvArray[i] = (uvArray[i] - minU) / rangeU;
+            uvArray[i + 1] = (uvArray[i + 1] - minV) / rangeV;
+          }
+          uvAttribute.needsUpdate = true;
+        }
+      }
+      
+      return extrudeGeometry;
     } catch (error) {
       console.error('Error creating ExtrudeGeometry:', error);
       // Fallback to box on error
@@ -496,17 +688,27 @@ function GeneratedTableTop({
     }
   }, [generateShape, thickness, edgeProfile]);
 
-  // Create material with texture support
+  // Create material with texture support - realistic marble/granite properties
   const material3D = useMemo(() => {
-    const mat = new THREE.MeshStandardMaterial({
-      color: material && materialColors[material] ? materialColors[material] : '#8B7355',
-      roughness: 0.3,
-      metalness: 0.1,
+    const fallbackColor = material && materialColors[material] 
+      ? materialColors[material] 
+      : materialColors.default;
+    
+    const mat = new THREE.MeshPhysicalMaterial({
+      color: fallbackColor, // Realistic natural stone color
+      roughness: 0.08, // Very low roughness for highly polished stone
+      metalness: 0.0, // No metalness for natural stone
+      clearcoat: 0.6, // Higher clearcoat for glossy polished finish
+      clearcoatRoughness: 0.05, // Very smooth clearcoat
+      reflectivity: 0.6, // Higher reflectivity for polished surface
+      ior: 1.5, // Index of refraction for stone
+      transmission: 0.0, // No transmission for solid stone
     });
     
     // Apply texture if loaded
     if (texture) {
       mat.map = texture;
+      // Add normal map for surface detail (optional, can be added later)
       mat.needsUpdate = true;
     }
 
@@ -516,22 +718,54 @@ function GeneratedTableTop({
   // Ensure we always have valid geometry and material
   if (!geometry || !material3D) {
     console.error('GeneratedTableTop: Missing geometry or material', { geometry, material3D });
+      return (
+        <mesh>
+          <boxGeometry args={[2, 0.1, 1]} />
+          <meshStandardMaterial color={materialColors.default} />
+        </mesh>
+      );
+  }
+
+  // Rotate to lay flat on the XZ plane (Y is up) - no horizontal rotation
+  const rotation: [number, number, number] = useMemo(() => {
+    return [-Math.PI / 2, 0, 0]; // -90 around X to lay flat
+  }, []);
+
+  // Show loading overlay when texture is loading
+  if (isTextureLoading) {
     return (
-      <mesh>
-        <boxGeometry args={[2, 0.1, 1]} />
-        <meshStandardMaterial color="#8B7355" />
-      </mesh>
+      <group>
+        <mesh 
+          ref={meshRef} 
+          geometry={geometry} 
+          material={material3D} 
+          rotation={rotation}
+          castShadow
+          receiveShadow
+        />
+        {/* Loading indicator - subtle overlay */}
+        <mesh rotation={rotation}>
+          <planeGeometry args={[10, 10]} />
+          <meshBasicMaterial 
+            color="#ffffff" 
+            transparent 
+            opacity={0.3}
+          />
+        </mesh>
+      </group>
     );
   }
 
-  // Rotate to lay flat on the XZ plane (Y is up) and rotate 90 degrees horizontally around Y
-  const rotation: [number, number, number] = useMemo(() => {
-    return [-Math.PI / 2, 0, 0]; // -90 around X to lay flat, no Y rotation initially
-  }, []);
-
   return (
-    <group rotation={[0, Math.PI / 2, 0]}> {/* Rotate 90 degrees horizontally around Y */}
-      <mesh ref={meshRef} geometry={geometry} material={material3D} rotation={rotation} />
+    <group>
+      <mesh 
+        ref={meshRef} 
+        geometry={geometry} 
+        material={material3D} 
+        rotation={rotation}
+        castShadow
+        receiveShadow
+      />
     </group>
   );
 }
@@ -541,9 +775,70 @@ function PlaceholderTableTop({ material }: { material?: string }) {
   return (
     <mesh>
       <boxGeometry args={[2, 0.1, 1]} />
-      <meshStandardMaterial color={material && materialColors[material] ? materialColors[material] : '#8B7355'} />
+      <meshStandardMaterial color={material && materialColors[material] ? materialColors[material] : materialColors.default} />
     </mesh>
   );
+}
+
+// AllInStone metal material presets - exact specifications
+function getAllInStoneMetalMaterial(type: string): THREE.MeshPhysicalMaterial {
+  switch (type) {
+    case "steel-polished":
+      return new THREE.MeshPhysicalMaterial({
+      color: "#D8D8D8", // Slightly warmer, more realistic polished steel
+      metalness: 1.0,
+      roughness: 0.12, // Even smoother for realistic polished metal
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.08, // Smoother clearcoat
+      reflectivity: 1.0,
+      ior: 2.4,
+      });
+
+    case "steel-brushed":
+      return new THREE.MeshPhysicalMaterial({
+        color: "#c4c4c4",
+        metalness: 0.95,
+        roughness: 0.35,
+        clearcoat: 0.5,
+        clearcoatRoughness: 0.3,
+        reflectivity: 0.9,
+        ior: 2.2,
+      });
+
+    case "black-matte":
+      return new THREE.MeshPhysicalMaterial({
+        color: "#1a1a1a",
+        metalness: 0.8,
+        roughness: 0.6,
+        clearcoat: 0.2,
+        clearcoatRoughness: 0.5,
+        reflectivity: 0.4,
+        ior: 2.0,
+      });
+
+    case "brass-gold":
+      return new THREE.MeshPhysicalMaterial({
+        color: "#d4c19c",
+        metalness: 1.0,
+        roughness: 0.25,
+        clearcoat: 0.8,
+        clearcoatRoughness: 0.2,
+        reflectivity: 1.0,
+        ior: 2.8,
+      });
+
+    case "gunmetal":
+    default:
+      return new THREE.MeshPhysicalMaterial({
+        color: "#4a4a4a",
+        metalness: 0.95,
+        roughness: 0.4,
+        clearcoat: 0.5,
+        clearcoatRoughness: 0.3,
+        reflectivity: 0.8,
+        ior: 2.3,
+      });
+  }
 }
 
 // Placeholder base when model fails to load
@@ -556,28 +851,79 @@ function PlaceholderBase() {
   );
 }
 
-function Base({ modelPath }: { modelPath: string }) {
+function Base({ modelPath, baseStyle, dimensions, shape }: { 
+    modelPath: string; 
+    baseStyle?: string;
+    dimensions?: ModelViewerProps['dimensions'];
+    shape?: string;
+}) {
     const groupRef = useRef<THREE.Group>(null);
     const { scene } = useGLTF(modelPath);
 
     // Clone to avoid shared material editing
     const clonedScene = scene.clone();
 
-    // --- APPLY VERY DARK GRAY MATERIAL TO ALL MESHES ---
+    // Calculate base scale based on table dimensions
+    const baseScale = useMemo(() => {
+        if (!dimensions || !shape) return { x: 1, y: 1, z: 1 };
+        
+        // Get base bounding box to determine original size
+        const box = new THREE.Box3();
+        box.setFromObject(clonedScene);
+        const baseSize = box.getSize(new THREE.Vector3());
+        
+        // Calculate target size based on table dimensions
+        let targetLength = 1;
+        let targetWidth = 1;
+        
+        if (shape === 'rectangular' || shape === 'curved-rectangular') {
+            targetLength = (dimensions.length || 200) / 100; // Convert cm to meters
+            targetWidth = (dimensions.width || 100) / 100;
+        } else if (shape === 'square') {
+            const size = (dimensions.squareLength || 150) / 100;
+            targetLength = size;
+            targetWidth = size;
+        } else if (shape === 'round') {
+            const radius = (dimensions.radius || 100) / 100;
+            targetLength = radius * 2;
+            targetWidth = radius * 2;
+        } else if (shape === 'oval') {
+            targetLength = (dimensions.largestDiameter || 200) / 100;
+            targetWidth = (dimensions.smallestDiameter || 120) / 100;
+        }
+        
+        // Scale base to fit table with some margin (90% of table size for base4, adjust as needed)
+        const scaleFactor = baseStyle === 'base4' ? 0.85 : 0.9; // base4 should be smaller
+        const scaleX = baseSize.x > 0 ? (targetLength * scaleFactor) / baseSize.x : 1;
+        const scaleZ = baseSize.z > 0 ? (targetWidth * scaleFactor) / baseSize.z : 1;
+        
+        return { x: scaleX, y: 1, z: scaleZ };
+    }, [dimensions, shape, baseStyle, clonedScene]);
+
+    // --- APPLY REALISTIC MATTE GRAY MATERIAL TO BASE ---
     useEffect(() => {
         clonedScene.traverse((child) => {
             if (child instanceof THREE.Mesh) {
+                // Realistic matte gray metal finish - like powder-coated or anodized furniture
+                // No shine, no reflections, just solid matte material
                 child.material = new THREE.MeshStandardMaterial({
-                    color: "#1a1a1a", // Very dark gray, almost black
-                    metalness: 0.1, // Low metalness for matte look
-                    roughness: 0.9, // High roughness for matte finish
+                    color: "#5A5A5A", // Slightly darker realistic gray
+                    metalness: 0.1, // Very low metalness - barely metallic
+                    roughness: 0.95, // Very high roughness - completely matte
+                    // No clearcoat, no reflectivity - just solid matte material
                 });
+                child.castShadow = true;
+                child.receiveShadow = true;
             }
         });
-    }, [clonedScene]);
+    }, [clonedScene, baseStyle]);
 
     return (
-        <group ref={groupRef} rotation={[0, Math.PI, 0]}>
+        <group 
+            ref={groupRef} 
+            rotation={[0, Math.PI, 0]}
+            scale={[baseScale.x, baseScale.y, baseScale.z]}
+        >
             <primitive object={clonedScene} />
         </group>
     );
@@ -592,6 +938,8 @@ function CombinedModel({
   dimensions,
   edgeProfile,
   thickness,
+  textureType,
+  baseStyle,
   onPositioned 
 }: { 
   tableTopPath?: string; 
@@ -601,6 +949,8 @@ function CombinedModel({
   dimensions?: ModelViewerProps['dimensions'];
   edgeProfile?: string;
   thickness?: number;
+  textureType?: string;
+  baseStyle?: string;
   onPositioned?: () => void;
 }) {
   const baseGroupRef = useRef<THREE.Group>(null);
@@ -736,7 +1086,12 @@ function CombinedModel({
               <ModelErrorBoundary
                 fallback={<PlaceholderBase />}
               >
-                <Base modelPath={basePath} />
+                <Base 
+                    modelPath={basePath} 
+                    baseStyle={baseStyle}
+                    dimensions={dimensions}
+                    shape={shape}
+                />
               </ModelErrorBoundary>
             </group>
           )}
@@ -764,6 +1119,7 @@ function CombinedModel({
               thickness={thickness || 0.02}
               material={material}
               edgeProfile={edgeProfile}
+              textureType={textureType}
             />
           ) : (
             <PlaceholderTableTop material={material} />
@@ -781,7 +1137,7 @@ function PlaceholderModel() {
     <group ref={groupRef}>
       <mesh>
         <boxGeometry args={[2, 0.1, 1]} />
-        <meshStandardMaterial color="#8B7355" />
+        <meshStandardMaterial color={materialColors.default} />
       </mesh>
       <mesh position={[0, -0.5, 0]}>
         <cylinderGeometry args={[0.1, 0.1, 1, 32]} />
@@ -791,7 +1147,7 @@ function PlaceholderModel() {
   );
 }
 
-const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseStyle, dimensions, edgeProfile, thickness }: ModelViewerProps) => {
+const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseStyle, dimensions, edgeProfile, thickness, textureType }: ModelViewerProps) => {
   const [hasError, setHasError] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [isPositioned, setIsPositioned] = useState(false);
@@ -853,7 +1209,9 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
             alpha: true,
             powerPreference: "high-performance",
             stencil: false,
-            depth: true
+            depth: true,
+            toneMapping: THREE.ACESFilmicToneMapping,
+            toneMappingExposure: 1.2
           }}
           dpr={[1, 2]}
           className="w-full h-full"
@@ -873,15 +1231,64 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
           fallback={
             <mesh>
               <boxGeometry args={[1, 0.1, 0.5]} />
-              <meshStandardMaterial color="#8B7355" />
+              <meshStandardMaterial color={materialColors.default} />
             </mesh>
           }
         >
             <PerspectiveCamera makeDefault position={[0, 1, 3]} fov={50} />
-            <ambientLight intensity={0.5} />
-            <directionalLight position={[5, 5, 5]} intensity={1} castShadow />
-            <directionalLight position={[-5, 5, -5]} intensity={0.5} />
-            <pointLight position={[0, 10, 0]} intensity={0.5} />
+            
+            {/* Professional studio lighting setup for photorealistic rendering */}
+            <ambientLight intensity={0.4} />
+            
+            {/* Main key light - bright, casts shadows */}
+            <directionalLight 
+              position={[5, 8, 5]} 
+              intensity={2.5} 
+              castShadow
+              shadow-mapSize-width={2048}
+              shadow-mapSize-height={2048}
+              shadow-camera-left={-5}
+              shadow-camera-right={5}
+              shadow-camera-top={5}
+              shadow-camera-bottom={-5}
+              shadow-bias={-0.0001}
+            />
+            
+            {/* Fill light - softer, from opposite side */}
+            <directionalLight 
+              position={[-5, 6, -5]} 
+              intensity={0.8} 
+              castShadow={false}
+            />
+            
+            {/* Rim light - adds depth and separation */}
+            <directionalLight 
+              position={[-3, 4, 8]} 
+              intensity={0.6} 
+              castShadow={false}
+            />
+            
+            {/* Top light - soft overhead illumination */}
+            <pointLight 
+              position={[0, 10, 0]} 
+              intensity={0.8}
+              distance={15}
+              decay={2}
+            />
+            
+            {/* Additional accent lights for realism */}
+            <pointLight 
+              position={[4, 5, 4]} 
+              intensity={0.5}
+              distance={10}
+              decay={2}
+            />
+            <pointLight 
+              position={[-4, 5, -4]} 
+              intensity={0.3}
+              distance={10}
+              decay={2}
+            />
             
             <CombinedModel 
               tableTopPath={tableTopPath} 
@@ -891,6 +1298,8 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
               dimensions={dimensions}
               edgeProfile={edgeProfile}
               thickness={thickness}
+              textureType={textureType}
+              baseStyle={baseStyle}
               onPositioned={() => setIsPositioned(true)}
             />
             
@@ -902,7 +1311,13 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
               maxDistance={10}
               autoRotate={false}
             />
-            <Environment preset="studio" />
+            
+            {/* High-quality environment for realistic reflections */}
+            <Environment 
+              preset="studio" 
+              background={false}
+              environmentIntensity={1.0}
+            />
           </Suspense>
         </Canvas>
       </div>
