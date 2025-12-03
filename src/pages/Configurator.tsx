@@ -100,16 +100,20 @@ const Configurator = () => {
     { value: 'buraga', label: 'Bază Rotundă (Buraga)', baseName: 'buraga', isRound: true },
   ];
 
+  // Get base path for GitHub Pages (same as Vite's BASE_URL)
+  const basePathPrefix = import.meta.env.BASE_URL || '/';
+
   // Map base styles to local base model files
+  // Use basePathPrefix to ensure paths work on GitHub Pages
   const baseStyleToModel: Record<string, string> = {
-    'base1': '/models/base1.glb',
-    'base2': '/models/base2.glb',
-    'base3': '/models/base3.glb',
-    'base4': '/models/base4.glb',
-    'base5': '/models/base5.glb',
-    'base6': '/models/base6.glb',
-    'base7': '/models/base7.glb',
-    'buraga': '/models/buraga.glb',
+    'base1': `${basePathPrefix}models/base1.glb`,
+    'base2': `${basePathPrefix}models/base2.glb`,
+    'base3': `${basePathPrefix}models/base3.glb`,
+    'base4': `${basePathPrefix}models/base4.glb`,
+    'base5': `${basePathPrefix}models/base5.glb`,
+    'base6': `${basePathPrefix}models/base6.glb`,
+    'base7': `${basePathPrefix}models/base7.glb`,
+    'buraga': `${basePathPrefix}models/buraga.glb`,
   };
 
   // Use undefined for tableTopPath to generate shapes via code instead of GLB files
@@ -120,8 +124,8 @@ const Configurator = () => {
 
   // Allow all bases for all shapes (user will specify which don't work)
   const basePath = useMemo(() => {
-    return baseStyleToModel[baseStyle] || '/models/base1.glb';
-  }, [baseStyle]);
+    return baseStyleToModel[baseStyle] || `${basePathPrefix}models/base1.glb`;
+  }, [baseStyle, basePathPrefix]);
 
 
 
