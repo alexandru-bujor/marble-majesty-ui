@@ -34,8 +34,10 @@
           var decoded = l.search.slice(1).split('&').map(function(s) { 
             return s.replace(/~and~/g, '&')
           }).join('?');
+          // Get base path from the current pathname (e.g., '/marble-majesty-ui')
+          var basePath = l.pathname.split('/').slice(0, 2).join('/') || '';
           window.history.replaceState(null, null,
-              l.pathname.slice(0, -1) + decoded + l.hash
+              basePath + decoded + l.hash
           );
         }
       }(window.location))
