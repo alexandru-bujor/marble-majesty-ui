@@ -117,7 +117,7 @@ const Configurator = () => {
   const [thickness, setThickness] = useState(20); // Thickness in mm (20mm or 30mm)
   const [baseStyle, setBaseStyle] = useState('base4'); // Default to base4 (baza eleganta)
   const [textureType, setTextureType] = useState('1');
-  const [configPanelOpen, setConfigPanelOpen] = useState(false); // Config panel visibility - starts closed on mobile
+  const [configPanelOpen, setConfigPanelOpen] = useState(isMobile); // Config panel visibility - starts open on mobile for better UX
 
   // Texture type options - all 48 HEIC images
   const textureTypes = Array.from({ length: 26 }, (_, i) => ({
@@ -222,6 +222,7 @@ const Configurator = () => {
     // On mobile, skip 3D entirely to prevent crashes
     if (isMobile) {
       setSkip3D(true);
+      setConfigPanelOpen(true); // Open settings panel by default on mobile
       console.log('Mobile device detected - 3D viewer disabled for stability');
     }
   }, [isMobile]);
@@ -535,8 +536,8 @@ const Configurator = () => {
       
       {/* Configurator Section - Full Screen, positioned below navbar */}
       <section className="flex-1 flex flex-col md:flex-row min-h-0 pt-20 md:pt-24">
-        {/* 3D Model Viewer - Takes remaining space, full width on mobile */}
-        <div className="flex-1 min-h-0 relative">
+        {/* 3D Model Viewer - Hidden on mobile when panel is open, takes remaining space on desktop */}
+        <div className={`${isMobile && configPanelOpen ? 'hidden' : 'flex-1'} min-h-0 relative`}>
           <Card className="border-border overflow-hidden h-full">
             <CardContent className="p-0 h-full">
               <div ref={canvasRef} className="w-full h-full relative">
@@ -548,11 +549,17 @@ const Configurator = () => {
                         <>
                           <div className="text-6xl mb-4">📐</div>
                           <p className="font-sans text-sm text-muted-foreground mb-2">
-                            Vizualizator 3D disponibil pe desktop
+                            Configurator de Masă
                           </p>
-                          <p className="font-sans text-xs text-muted-foreground">
-                            Pe mobile, poți configura masa folosind panoul de setări. Vizualizarea 3D este disponibilă pe dispozitive desktop pentru o experiență optimă.
+                          <p className="font-sans text-xs text-muted-foreground mb-4">
+                            Folosește panoul de setări pentru a configura masa dorită. Vizualizarea 3D este disponibilă pe dispozitive desktop.
                           </p>
+                          <button
+                            onClick={() => setConfigPanelOpen(true)}
+                            className="btn-luxury-filled px-4 py-2 text-sm"
+                          >
+                            Deschide Setările
+                          </button>
                         </>
                       ) : (
                         <>
@@ -625,8 +632,8 @@ const Configurator = () => {
           </button>
         </div>
 
-        {/* Configuration Panel - Desktop: Fixed Right Sidebar, Mobile: Bottom Overlay */}
-        <div className={`md:static md:w-[420px] md:h-full md:translate-y-0 md:border-t-0 md:border-l absolute bottom-0 left-0 right-0 md:right-auto bg-background/98 backdrop-blur-md border-t border-border transition-transform duration-300 max-h-[85vh] md:max-h-full overflow-y-auto ${
+        {/* Configuration Panel - Desktop: Fixed Right Sidebar, Mobile: Full Screen Overlay */}
+        <div className={`md:static md:w-[420px] md:h-full md:translate-y-0 md:border-t-0 md:border-l absolute bottom-0 left-0 right-0 md:right-auto bg-background/98 backdrop-blur-md border-t border-border transition-transform duration-300 ${isMobile ? 'max-h-[100vh]' : 'max-h-[85vh]'} md:max-h-full overflow-y-auto ${
             configPanelOpen ? 'translate-y-0' : 'translate-y-full md:translate-y-0'
           }`}>
             <div className="p-4 md:p-6 pb-6 md:pb-6 md:overflow-y-auto md:h-full">
