@@ -1187,8 +1187,22 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
     );
   }
 
-  try {
-    return (
+  // Wrap Canvas in Error Boundary to catch and stop continuous errors
+  return (
+    <ModelErrorBoundary
+      fallback={
+        <div className="w-full h-full flex items-center justify-center bg-secondary/10">
+          <div className="text-center p-8">
+            <p className="font-sans text-sm text-muted-foreground mb-2">
+              Eroare la încărcarea modelului 3D
+            </p>
+            <p className="font-sans text-xs text-muted-foreground">
+              Te rugăm să reîmprospătezi pagina
+            </p>
+          </div>
+        </div>
+      }
+    >
       <div className="w-full h-full bg-gradient-to-b from-secondary/20 to-secondary/5 rounded-lg overflow-hidden relative">
         <Canvas
           shadows={false}
@@ -1211,7 +1225,10 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
               }
             } catch (error) {
               console.error('Error initializing Canvas:', error);
-              setHasError(true);
+              // Only set error once to prevent loops
+              if (!hasError) {
+                setHasError(true);
+              }
             }
           }}
         >
@@ -1276,22 +1293,8 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
           </Suspense>
         </Canvas>
       </div>
-    );
-  } catch (error) {
-    console.error('Error rendering ModelViewer:', error);
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-secondary/10">
-        <div className="text-center p-8">
-          <p className="font-sans text-sm text-muted-foreground mb-2">
-            Eroare la inițializarea vizualizatorului 3D
-          </p>
-          <p className="font-sans text-xs text-muted-foreground">
-            Te rugăm să reîmprospătezi pagina
-          </p>
-        </div>
-      </div>
-    );
-  }
+    </ModelErrorBoundary>
+  );
 };
 
 export default ModelViewer;

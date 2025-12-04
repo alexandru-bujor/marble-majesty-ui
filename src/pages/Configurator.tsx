@@ -15,30 +15,27 @@ import { ShoppingBag, Download, RotateCcw, ChevronUp, ChevronDown } from 'lucide
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-// Lazy load ModelViewer with error handling
-const ModelViewer = lazy(() => 
-  import('@/components/ModelViewer').catch((error) => {
-    console.error('Failed to load ModelViewer:', error);
-    // Return a placeholder component that shows an error
+// Lazy load ModelViewer with error handling to prevent continuous errors
+const ModelViewer = lazy(() => {
+  return import('@/components/ModelViewer').catch((error) => {
+    console.error('Failed to lazy load ModelViewer:', error);
+    // Return a safe fallback component that won't cause errors
     return {
       default: () => (
         <div className="w-full h-full flex items-center justify-center bg-secondary/10">
           <div className="text-center p-8 space-y-4">
             <p className="font-sans text-sm text-muted-foreground mb-2">
-              Eroare la încărcarea vizualizatorului 3D
+              Configuratorul 3D nu este disponibil pe acest dispozitiv
             </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="btn-luxury-filled px-4 py-2 text-sm"
-            >
-              Reîncarcă pagina
-            </button>
+            <p className="font-sans text-xs text-muted-foreground">
+              Te rugăm să încerci pe un dispozitiv desktop sau să actualizezi browserul
+            </p>
           </div>
         </div>
       )
     };
-  })
-);
+  });
+});
 
 // Check WebGL support
 const checkWebGLSupport = (): boolean => {
@@ -104,6 +101,7 @@ const Configurator = () => {
   const [isTextureLoading, setIsTextureLoading] = useState(false);
   const [webGLSupported, setWebGLSupported] = useState<boolean | null>(null);
   const [modelViewerError, setModelViewerError] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
   // Dimensions based on shape
   const [radius, setRadius] = useState([100]); // For circle
   const [squareLength, setSquareLength] = useState([150]); // For square
@@ -218,17 +216,87 @@ const Configurator = () => {
     setWebGLSupported(checkWebGLSupport());
   }, []);
 
-  // Handle ModelViewer lazy loading errors
+  // Set timeout for loading to prevent infinite loading
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoadingTimeout(true);
+    }, 30000); // 30 seconds timeout
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Handle ModelViewer errors - prevent continuous error loops
+  useEffect(() => {
+    if (modelViewerError) return; // Don't set up handlers if already in error state
+    
+    let errorCount = 0;
+    const MAX_ERRORS = 3; // Stop after 3 errors to prevent loops
+    
     const handleError = (event: ErrorEvent) => {
-      if (event.message?.includes('ModelViewer') || event.filename?.includes('ModelViewer')) {
+      errorCount++;
+      if (errorCount > MAX_ERRORS) {
+        // Stop propagation to prevent continuous errors
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      
+      // Only catch errors related to ModelViewer/Canvas/WebGL
+      const errorMsg = event.error?.message || event.message || '';
+      const isRelevantError = 
+        errorMsg.includes('Canvas') || 
+        errorMsg.includes('WebGL') || 
+        errorMsg.includes('ModelViewer') ||
+        errorMsg.includes('three') ||
+        errorMsg.includes('THREE') ||
+        errorMsg.includes('GLTF') ||
+        errorMsg.includes('GLB');
+      
+      if (isRelevantError && !modelViewerError) {
+        console.error('Configurator error:', event.error);
         setModelViewerError(true);
+        // Prevent error from propagating further
+        event.preventDefault();
+        event.stopPropagation();
       }
     };
 
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
-  }, []);
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      errorCount++;
+      if (errorCount > MAX_ERRORS) {
+        event.preventDefault();
+        return;
+      }
+      
+      const reason = event.reason;
+      const errorMsg = typeof reason === 'object' && reason?.message 
+        ? String(reason.message) 
+        : String(reason);
+      
+      const isRelevantError = 
+        errorMsg.includes('Canvas') || 
+        errorMsg.includes('WebGL') || 
+        errorMsg.includes('ModelViewer') ||
+        errorMsg.includes('three') ||
+        errorMsg.includes('THREE') ||
+        errorMsg.includes('GLTF') ||
+        errorMsg.includes('GLB');
+      
+      if (isRelevantError && !modelViewerError) {
+        console.error('Unhandled promise rejection:', event.reason);
+        setModelViewerError(true);
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('error', handleError, { capture: true });
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    
+    return () => {
+      window.removeEventListener('error', handleError, { capture: true });
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, [modelViewerError]);
 
   const downloadPDF = async () => {
     const doc = new jsPDF('p', 'mm', 'a4');
