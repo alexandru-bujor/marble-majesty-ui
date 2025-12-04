@@ -1,8 +1,6 @@
-import { useState, useMemo, lazy, Suspense, useEffect, useRef } from 'react';
+import { useState, useMemo, lazy, Suspense, useEffect, useRef, Component, ErrorInfo } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/sections/Footer';
-
-const ModelViewer = lazy(() => import('@/components/ModelViewer'));
 import { Slider } from '@/components/ui/slider';
 import {
   Select,
@@ -17,10 +15,95 @@ import { ShoppingBag, Download, RotateCcw, ChevronUp, ChevronDown } from 'lucide
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+// Lazy load ModelViewer with error handling
+const ModelViewer = lazy(() => 
+  import('@/components/ModelViewer').catch((error) => {
+    console.error('Failed to load ModelViewer:', error);
+    // Return a placeholder component that shows an error
+    return {
+      default: () => (
+        <div className="w-full h-full flex items-center justify-center bg-secondary/10">
+          <div className="text-center p-8 space-y-4">
+            <p className="font-sans text-sm text-muted-foreground mb-2">
+              Eroare la încărcarea vizualizatorului 3D
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="btn-luxury-filled px-4 py-2 text-sm"
+            >
+              Reîncarcă pagina
+            </button>
+          </div>
+        </div>
+      )
+    };
+  })
+);
+
+// Check WebGL support
+const checkWebGLSupport = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    return !!gl;
+  } catch (e) {
+    return false;
+  }
+};
+
+// Error Boundary for Configurator
+class ConfiguratorErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Configurator error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-screen w-screen bg-background flex flex-col">
+          <Navbar />
+          <div className="flex-1 flex items-center justify-center p-6 pt-24">
+            <div className="max-w-md text-center space-y-4">
+              <h2 className="font-serif text-2xl text-foreground">Eroare la încărcare</h2>
+              <p className="font-sans text-sm text-muted-foreground">
+                Ne pare rău, a apărut o problemă la încărcarea configuratorului.
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="btn-luxury-filled px-6 py-3"
+              >
+                Reîncarcă pagina
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const Configurator = () => {
   const [material, setMaterial] = useState(''); // Not used, kept for compatibility
   const [shape, setShape] = useState('rectangular');
   const [isTextureLoading, setIsTextureLoading] = useState(false);
+  const [webGLSupported, setWebGLSupported] = useState<boolean | null>(null);
+  const [modelViewerError, setModelViewerError] = useState(false);
   // Dimensions based on shape
   const [radius, setRadius] = useState([100]); // For circle
   const [squareLength, setSquareLength] = useState([150]); // For square
@@ -33,7 +116,7 @@ const Configurator = () => {
   const [thickness, setThickness] = useState(20); // Thickness in mm (20mm or 30mm)
   const [baseStyle, setBaseStyle] = useState('base4'); // Default to base4 (baza eleganta)
   const [textureType, setTextureType] = useState('1');
-  const [configPanelOpen, setConfigPanelOpen] = useState(true); // Config panel visibility
+  const [configPanelOpen, setConfigPanelOpen] = useState(false); // Config panel visibility - starts closed on mobile
 
   // Texture type options - all 48 HEIC images
   const textureTypes = Array.from({ length: 26 }, (_, i) => ({
@@ -129,6 +212,23 @@ const Configurator = () => {
   }, [shape, radius, squareLength, length, width, largestDiameter, smallestDiameter, borderRadius]);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Check WebGL support on mount
+  useEffect(() => {
+    setWebGLSupported(checkWebGLSupport());
+  }, []);
+
+  // Handle ModelViewer lazy loading errors
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      if (event.message?.includes('ModelViewer') || event.filename?.includes('ModelViewer')) {
+        setModelViewerError(true);
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
 
   const downloadPDF = async () => {
     const doc = new jsPDF('p', 'mm', 'a4');
@@ -327,9 +427,33 @@ const Configurator = () => {
     doc.save(`table-specifications-${Date.now()}.pdf`);
   };
 
+  // Show WebGL error if not supported
+  if (webGLSupported === false) {
+    return (
+      <div className="h-screen w-screen bg-background flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center p-6 pt-24">
+          <div className="max-w-md text-center space-y-4">
+            <h2 className="font-serif text-2xl text-foreground">WebGL nu este suportat</h2>
+            <p className="font-sans text-sm text-muted-foreground">
+              Configuratorul necesită WebGL pentru a funcționa. Te rugăm să folosești un browser modern sau să activezi accelerația hardware.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="btn-luxury-filled px-6 py-3"
+            >
+              Reîncarcă pagina
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen w-screen bg-background overflow-hidden flex flex-col">
-      <Navbar />
+    <ConfiguratorErrorBoundary>
+      <div className="h-screen w-screen bg-background overflow-hidden flex flex-col">
+        <Navbar />
       
       {/* Configurator Section - Full Screen, positioned below navbar */}
       <section className="flex-1 flex flex-col md:flex-row min-h-0 pt-20 md:pt-24">
@@ -338,15 +462,34 @@ const Configurator = () => {
           <Card className="border-border overflow-hidden h-full">
             <CardContent className="p-0 h-full">
               <div ref={canvasRef} className="w-full h-full relative">
-                <Suspense fallback={
+                {modelViewerError ? (
                   <div className="w-full h-full flex items-center justify-center bg-secondary/10">
-                    <div className="text-center p-8">
-                      <p className="font-sans text-sm text-muted-foreground">
-                        Se încarcă vizualizatorul 3D...
+                    <div className="text-center p-8 space-y-4">
+                      <p className="font-sans text-sm text-muted-foreground mb-2">
+                        Eroare la încărcarea vizualizatorului 3D
                       </p>
+                      <button
+                        onClick={() => {
+                          setModelViewerError(false);
+                          window.location.reload();
+                        }}
+                        className="btn-luxury-filled px-4 py-2 text-sm"
+                      >
+                        Reîncarcă
+                      </button>
                     </div>
                   </div>
-                }>
+                ) : (
+                  <Suspense fallback={
+                    <div className="w-full h-full flex items-center justify-center bg-secondary/10">
+                      <div className="text-center p-8">
+                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
+                        <p className="font-sans text-sm text-muted-foreground">
+                          Se încarcă vizualizatorul 3D...
+                        </p>
+                      </div>
+                    </div>
+                  }>
                     <ModelViewer
                         tableTopPath={tableTopPath}
                         basePath={basePath}
@@ -359,7 +502,8 @@ const Configurator = () => {
                         textureType={textureType}
                         onTextureLoading={setIsTextureLoading}
                     />
-                </Suspense>
+                  </Suspense>
+                )}
                 
                 {/* Texture Loading Overlay */}
                 {isTextureLoading && (
@@ -710,7 +854,8 @@ const Configurator = () => {
             </div>
         </div>
       </section>
-    </div>
+      </div>
+    </ConfiguratorErrorBoundary>
   );
 };
 

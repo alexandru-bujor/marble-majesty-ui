@@ -66,7 +66,14 @@ const Navbar = () => {
 
         {/* Cart & Mobile Menu */}
         <div className="flex items-center gap-4">
-          <Link to="/shop" className="relative p-2 text-foreground hover:text-gold transition-colors duration-300">
+          <Link 
+            to="/shop" 
+            className={`relative p-2 transition-colors duration-300 ${
+              shouldShowGlass 
+                ? 'text-foreground hover:text-gold' 
+                : 'text-white hover:text-white/80'
+            }`}
+          >
             <ShoppingBag size={20} strokeWidth={1.5} />
             <span className="absolute -top-1 -right-1 w-4 h-4 bg-gold text-graphite text-[10px] rounded-full flex items-center justify-center font-sans">
               0
@@ -75,7 +82,11 @@ const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2 text-foreground"
+            className={`md:hidden p-2 transition-colors duration-300 ${
+              shouldShowGlass 
+                ? 'text-foreground hover:text-gold' 
+                : 'text-white hover:text-white/80'
+            }`}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}

@@ -65,7 +65,7 @@ const Hero = () => {
           >
             <Link
               to="/shop"
-              className="btn-luxury inline-block"
+              className="btn-luxury-filled inline-block"
             >
               Explorează Colecția
             </Link>
