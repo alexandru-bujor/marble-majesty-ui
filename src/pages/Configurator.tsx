@@ -1,6 +1,7 @@
 import { useState, useMemo, lazy, Suspense, useEffect, useRef, Component, ErrorInfo } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/sections/Footer';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Slider } from '@/components/ui/slider';
 import {
   Select,
@@ -96,12 +97,14 @@ class ConfiguratorErrorBoundary extends Component<
 }
 
 const Configurator = () => {
+  const isMobile = useIsMobile();
   const [material, setMaterial] = useState(''); // Not used, kept for compatibility
   const [shape, setShape] = useState('rectangular');
   const [isTextureLoading, setIsTextureLoading] = useState(false);
   const [webGLSupported, setWebGLSupported] = useState<boolean | null>(null);
   const [modelViewerError, setModelViewerError] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [skip3D, setSkip3D] = useState(false); // Skip 3D on mobile to prevent crashes
   // Dimensions based on shape
   const [radius, setRadius] = useState([100]); // For circle
   const [squareLength, setSquareLength] = useState([150]); // For square
@@ -211,10 +214,17 @@ const Configurator = () => {
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // Check WebGL support on mount
+  // Check WebGL support on mount and detect mobile
   useEffect(() => {
-    setWebGLSupported(checkWebGLSupport());
-  }, []);
+    const webglSupported = checkWebGLSupport();
+    setWebGLSupported(webglSupported);
+    
+    // On mobile, skip 3D entirely to prevent crashes
+    if (isMobile) {
+      setSkip3D(true);
+      console.log('Mobile device detected - 3D viewer disabled for stability');
+    }
+  }, [isMobile]);
 
   // Set timeout for loading to prevent infinite loading
   useEffect(() => {
@@ -530,47 +540,64 @@ const Configurator = () => {
           <Card className="border-border overflow-hidden h-full">
             <CardContent className="p-0 h-full">
               <div ref={canvasRef} className="w-full h-full relative">
-                {modelViewerError ? (
+                {/* On mobile, skip 3D entirely to prevent crashes */}
+                {skip3D || modelViewerError ? (
                   <div className="w-full h-full flex items-center justify-center bg-secondary/10">
                     <div className="text-center p-8 space-y-4">
-                      <p className="font-sans text-sm text-muted-foreground mb-2">
-                        Eroare la încărcarea vizualizatorului 3D
-                      </p>
-                      <button
-                        onClick={() => {
-                          setModelViewerError(false);
-                          window.location.reload();
-                        }}
-                        className="btn-luxury-filled px-4 py-2 text-sm"
-                      >
-                        Reîncarcă
-                      </button>
+                      {skip3D ? (
+                        <>
+                          <div className="text-6xl mb-4">📐</div>
+                          <p className="font-sans text-sm text-muted-foreground mb-2">
+                            Vizualizator 3D disponibil pe desktop
+                          </p>
+                          <p className="font-sans text-xs text-muted-foreground">
+                            Pe mobile, poți configura masa folosind panoul de setări. Vizualizarea 3D este disponibilă pe dispozitive desktop pentru o experiență optimă.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-sans text-sm text-muted-foreground mb-2">
+                            Eroare la încărcarea vizualizatorului 3D
+                          </p>
+                          <button
+                            onClick={() => {
+                              setModelViewerError(false);
+                              window.location.reload();
+                            }}
+                            className="btn-luxury-filled px-4 py-2 text-sm"
+                          >
+                            Reîncarcă
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ) : (
-                  <Suspense fallback={
-                    <div className="w-full h-full flex items-center justify-center bg-secondary/10">
-                      <div className="text-center p-8">
-                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
-                        <p className="font-sans text-sm text-muted-foreground">
-                          Se încarcă vizualizatorul 3D...
-                        </p>
+                  {!skip3D && (
+                    <Suspense fallback={
+                      <div className="w-full h-full flex items-center justify-center bg-secondary/10">
+                        <div className="text-center p-8">
+                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
+                          <p className="font-sans text-sm text-muted-foreground">
+                            Se încarcă vizualizatorul 3D...
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  }>
-                    <ModelViewer
-                        tableTopPath={tableTopPath}
-                        basePath={basePath}
-                        material={material}
-                        shape={shape}
-                        baseStyle={baseStyle}
-                        dimensions={dimensions}
-                        edgeProfile={edgeProfile}
-                        thickness={thickness / 1000} // Convert mm to meters
-                        textureType={textureType}
-                        onTextureLoading={setIsTextureLoading}
-                    />
-                  </Suspense>
+                    }>
+                      <ModelViewer
+                          tableTopPath={tableTopPath}
+                          basePath={basePath}
+                          material={material}
+                          shape={shape}
+                          baseStyle={baseStyle}
+                          dimensions={dimensions}
+                          edgeProfile={edgeProfile}
+                          thickness={thickness / 1000} // Convert mm to meters
+                          textureType={textureType}
+                          onTextureLoading={setIsTextureLoading}
+                      />
+                    </Suspense>
+                  )}
                 )}
                 
                 {/* Texture Loading Overlay */}
