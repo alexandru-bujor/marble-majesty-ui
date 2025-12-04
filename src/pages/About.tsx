@@ -37,7 +37,7 @@ const About = () => {
             <div className="relative">
               <img
                 src={showroom1}
-                alt="Atelier Pietra Nobile"
+                alt="Atelier MobArt"
                 className="w-full aspect-[4/3] object-cover"
               />
             </div>

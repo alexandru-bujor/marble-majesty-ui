@@ -10,20 +10,105 @@ const Contact = () => {
     name: '',
     email: '',
     phone: '',
-    subject: '',
     message: '',
   });
+  
+  const [phoneError, setPhoneError] = useState('');
+
+  const formatPhoneNumber = (value: string): string => {
+    // Remove all non-digit characters except +
+    let cleaned = value.replace(/[^\d+]/g, '');
+    
+    // Ensure it starts with +
+    if (!cleaned.startsWith('+')) {
+      if (cleaned.length > 0 && cleaned[0] !== '+') {
+        cleaned = '+' + cleaned.replace(/\+/g, '');
+      } else if (cleaned.length === 0) {
+        return '';
+      }
+    }
+    
+    // Format: +373-123-45-678
+    if (cleaned.startsWith('+373')) {
+      let digits = cleaned.slice(4).replace(/\D/g, ''); // Remove non-digits after +373
+      if (digits.length > 8) digits = digits.slice(0, 8); // Limit to 8 digits
+      
+      let formatted = '+373';
+      if (digits.length > 0) {
+        formatted += '-' + digits.slice(0, 3);
+        if (digits.length > 3) {
+          formatted += '-' + digits.slice(3, 5);
+          if (digits.length > 5) {
+            formatted += '-' + digits.slice(5, 8);
+          }
+        }
+      }
+      return formatted;
+    }
+    
+    // If not +373, just add dashes every few digits
+    if (cleaned.length > 1) {
+      let digits = cleaned.slice(1).replace(/\D/g, '');
+      let formatted = '+' + digits.slice(0, 3);
+      if (digits.length > 3) {
+        formatted += '-' + digits.slice(3, 6);
+        if (digits.length > 6) {
+          formatted += '-' + digits.slice(6, 8);
+        }
+      }
+      return formatted;
+    }
+    
+    return cleaned;
+  };
+
+  const validatePhoneNumber = (phone: string): boolean => {
+    // Format: +373-123-45-678 (exactly this format)
+    const phoneRegex = /^\+373-\d{3}-\d{2}-\d{3}$/;
+    return phoneRegex.test(phone);
+  };
+
+  const handlePhoneFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    // Pre-fill with +373 if empty
+    if (!formData.phone) {
+      setFormData({ ...formData, phone: '+373' });
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setFormData({ ...formData, phone: formatted });
+    
+    if (formatted && !validatePhoneNumber(formatted)) {
+      setPhoneError('Format: +373-123-45-678');
+    } else {
+      setPhoneError('');
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate phone number format
+    if (!validatePhoneNumber(formData.phone)) {
+      setPhoneError('Format: +373-123-45-678');
+      toast({
+        title: "Eroare",
+        description: "Te rugăm să introduci un număr de telefon valid în formatul +373-123-45-678",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     toast({
       title: "Mesaj trimis!",
       description: "Vă vom contacta în cel mai scurt timp posibil.",
     });
-    setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+    setFormData({ name: '', email: '', phone: '', message: '' });
+    setPhoneError('');
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -55,13 +140,14 @@ const Contact = () => {
               <div>
                 <h2 className="font-serif text-2xl text-foreground mb-6">Informații Contact</h2>
                 <div className="space-y-6">
-                  <a href="mailto:contact@pietranobile.ro" className="flex items-start gap-4 group">
+                  <a href="mailto:mobart.md@gmail.com" className="flex items-start gap-4 group">
                     <div className="w-12 h-12 border border-gold/30 flex items-center justify-center group-hover:bg-gold/5 transition-colors">
                       <Mail size={20} className="text-gold" strokeWidth={1.5} />
                     </div>
                     <div>
                       <p className="font-sans text-xs tracking-[0.2em] uppercase text-muted-foreground mb-1">Email</p>
-                      <p className="font-sans text-foreground group-hover:text-gold transition-colors">contact@pietranobile.ro</p>
+                      <p className="font-sans text-foreground group-hover:text-gold transition-colors">
+                          mobart.md@gmail.com</p>
                     </div>
                   </a>
                   
@@ -71,20 +157,11 @@ const Contact = () => {
                     </div>
                     <div>
                       <p className="font-sans text-xs tracking-[0.2em] uppercase text-muted-foreground mb-1">Telefon</p>
-                      <p className="font-sans text-foreground group-hover:text-gold transition-colors">+40 721 234 567</p>
+                      <a href="tel:0799 89 960" className="font-sans text-foreground group-hover:text-gold transition-colors">0799 89 960</a>
                     </div>
                   </a>
                   
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 border border-gold/30 flex items-center justify-center">
-                      <MapPin size={20} className="text-gold" strokeWidth={1.5} />
-                    </div>
-                    <div>
-                      <p className="font-sans text-xs tracking-[0.2em] uppercase text-muted-foreground mb-1">Showroom</p>
-                      <p className="font-sans text-foreground">Str. Elegantei Nr. 42<br />Sector 1, București</p>
-                    </div>
-                  </div>
-                  
+
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 border border-gold/30 flex items-center justify-center">
                       <Clock size={20} className="text-gold" strokeWidth={1.5} />
@@ -98,9 +175,7 @@ const Contact = () => {
               </div>
 
               {/* Map placeholder */}
-              <div className="aspect-video bg-secondary/50 flex items-center justify-center border border-border">
-                <p className="font-sans text-sm text-muted-foreground">Hartă Interactivă</p>
-              </div>
+
             </div>
 
             {/* Contact Form */}
@@ -128,62 +203,48 @@ const Contact = () => {
                   </div>
                   <div>
                     <label className="font-sans text-xs tracking-[0.15em] uppercase text-foreground mb-2 block">
-                      Email *
+                      Email
                     </label>
                     <input
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      required
                       className="w-full px-4 py-3 bg-background border border-border focus:border-gold outline-none transition-colors font-sans text-sm"
                       placeholder="email@exemplu.ro"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="font-sans text-xs tracking-[0.15em] uppercase text-foreground mb-2 block">
-                      Telefon
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-background border border-border focus:border-gold outline-none transition-colors font-sans text-sm"
-                      placeholder="+40 7XX XXX XXX"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-sans text-xs tracking-[0.15em] uppercase text-foreground mb-2 block">
-                      Subiect
-                    </label>
-                    <select
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-background border border-border focus:border-gold outline-none transition-colors font-sans text-sm"
-                    >
-                      <option value="">Selectează...</option>
-                      <option value="showroom">Programare Showroom</option>
-                      <option value="custom">Design Personalizat</option>
-                      <option value="order">Comandă Existentă</option>
-                      <option value="other">Altele</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="font-sans text-xs tracking-[0.15em] uppercase text-foreground mb-2 block">
+                    Telefon *
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handlePhoneChange}
+                    onFocus={handlePhoneFocus}
+                    required
+                    className={`w-full px-4 py-3 bg-background border ${
+                      phoneError ? 'border-red-500' : 'border-border'
+                    } focus:border-gold outline-none transition-colors font-sans text-sm`}
+                    placeholder="+373-123-45-678"
+                  />
+                  {phoneError && (
+                    <p className="text-red-500 text-xs mt-1">{phoneError}</p>
+                  )}
                 </div>
 
                 <div>
                   <label className="font-sans text-xs tracking-[0.15em] uppercase text-foreground mb-2 block">
-                    Mesaj *
+                    Mesaj
                   </label>
                   <textarea
                     name="message"
                     value={formData.message}
                     onChange={handleChange}
-                    required
                     rows={5}
                     className="w-full px-4 py-3 bg-background border border-border focus:border-gold outline-none transition-colors font-sans text-sm resize-none"
                     placeholder="Descrieți cererea dumneavoastră..."

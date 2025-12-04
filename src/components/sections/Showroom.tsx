@@ -66,7 +66,7 @@ const Showroom = () => {
             <div className="relative z-10">
               <img
                 src={showroom1}
-                alt="Showroom Pietra Nobile cu masă de marmură"
+                alt="Showroom MobArt cu masă de marmură"
                 className="w-full aspect-[16/10] object-cover"
               />
               <div className="absolute inset-0 border border-gold/20" />

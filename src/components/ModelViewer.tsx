@@ -30,6 +30,7 @@ interface ModelViewerProps {
   edgeProfile?: string; // Edge profile type: 'straight', 'bullnose', 'beveled', 'ogee', 'eased'
   thickness?: number;
   textureType?: string; // Texture type: '1', '2', '3', '4'
+  onTextureLoading?: (loading: boolean) => void; // Callback for texture loading state
 }
 
 // AllInStone base URL for textures - using proxy in development to avoid CORS
@@ -43,19 +44,16 @@ const basePathPrefix = import.meta.env.BASE_URL || '/';
 // Local texture mapping - all 48 HEIC images
 // Files are sorted alphabetically: IMG_4639 through IMG_4707
 const heicFiles = [
-  'IMG_4639.HEIC', 'IMG_4640.HEIC', 'IMG_4641.HEIC', 'IMG_4642.HEIC',
-  'IMG_4643.HEIC', 'IMG_4644.HEIC', 'IMG_4645.HEIC', 'IMG_4646.HEIC',
+  'IMG_4639.HEIC',  'IMG_4641.HEIC',
+   'IMG_4644.HEIC', 'IMG_4645.HEIC',
   'IMG_4647.HEIC', 'IMG_4648.HEIC', 'IMG_4649.HEIC', 'IMG_4654.HEIC',
-  'IMG_4655.HEIC', 'IMG_4656.HEIC', 'IMG_4657.HEIC', 'IMG_4659.HEIC',
-  'IMG_4662.HEIC', 'IMG_4663.HEIC', 'IMG_4664.HEIC', 'IMG_4665.HEIC',
-  'IMG_4666.HEIC', 'IMG_4667.HEIC', 'IMG_4668.HEIC', 'IMG_4669.HEIC',
-  'IMG_4670.HEIC', 'IMG_4671.HEIC', 'IMG_4672.HEIC', 'IMG_4673.HEIC',
-  'IMG_4674.HEIC', 'IMG_4675.HEIC', 'IMG_4676.HEIC', 'IMG_4677.HEIC',
-  'IMG_4678.HEIC', 'IMG_4679.HEIC', 'IMG_4680.HEIC', 'IMG_4681.HEIC',
-  'IMG_4682.HEIC', 'IMG_4683.HEIC', 'IMG_4684.HEIC', 'IMG_4685.HEIC',
-  'IMG_4699.HEIC', 'IMG_4700.HEIC', 'IMG_4701.HEIC', 'IMG_4702.HEIC',
-  'IMG_4703.HEIC', 'IMG_4704.HEIC', 'IMG_4705.HEIC', 'IMG_4706.HEIC',
-  'IMG_4707.HEIC',
+  'IMG_4655.HEIC',
+   'IMG_4663.HEIC', 'IMG_4664.HEIC', 'IMG_4665.HEIC',
+   'IMG_4668.HEIC', 'IMG_4669.HEIC',
+   'IMG_4671.HEIC', 'IMG_4672.HEIC',
+   'IMG_4675.HEIC',  'IMG_4677.HEIC',
+   'IMG_4679.HEIC',  'IMG_4681.HEIC',
+   'IMG_4683.HEIC', 'IMG_4684.HEIC'
 ];
 
 const localTextures: Record<string, string> = {};
@@ -319,7 +317,8 @@ function GeneratedTableTop({
   thickness = 0.02, 
   material,
   edgeProfile = 'straight',
-  textureType
+  textureType,
+  onTextureLoading
 }: { 
   shape?: string; 
   dimensions?: ModelViewerProps['dimensions']; 
@@ -327,10 +326,16 @@ function GeneratedTableTop({
   material?: string;
   edgeProfile?: string;
   textureType?: string;
+  onTextureLoading?: (loading: boolean) => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
   const [isTextureLoading, setIsTextureLoading] = useState(false);
+  
+  // Notify parent when loading state changes
+  useEffect(() => {
+    onTextureLoading?.(isTextureLoading);
+  }, [isTextureLoading, onTextureLoading]);
   
   // Load texture asynchronously
   // Priority: textureType (local) > material (AllInStone)
@@ -614,14 +619,14 @@ function GeneratedTableTop({
             bevelEnabled = true;
             bevelSize = 0.003; // 3mm
             bevelThickness = 0.003; // 3mm
-            bevelSegments = 32; // High segments for smooth curve
+            bevelSegments = 16; // Reduced for faster rendering
             break;
           case 'shark-nose':
             // 45° + 4mm easing
             bevelEnabled = true;
             bevelSize = 0.004; // 4mm easing
             bevelThickness = thickness * 0.6; // 60% for 45° bevel
-            bevelSegments = 24;
+            bevelSegments = 12;
             break;
           case 'bull-nose':
           case 'bullnose':
@@ -629,14 +634,14 @@ function GeneratedTableTop({
             bevelEnabled = true;
             bevelSize = thickness * 0.5; // Half thickness = radius
             bevelThickness = thickness * 0.5;
-            bevelSegments = 64; // Maximum for perfect circle
+            bevelSegments = 32; // Reduced for faster rendering
             break;
           case 'eased':
             // 1.5mm radius
             bevelEnabled = true;
             bevelSize = 0.0015; // 1.5mm
             bevelThickness = 0.0015; // 1.5mm
-            bevelSegments = 16;
+            bevelSegments = 8;
             break;
         }
       }
@@ -647,7 +652,7 @@ function GeneratedTableTop({
         bevelThickness: bevelThickness,
         bevelSize: bevelSize,
         bevelSegments: bevelSegments,
-        curveSegments: 256, // Maximum segments for perfect curves (AllInStone precision)
+        curveSegments: 64, // Reduced for faster rendering while maintaining quality
       };
 
       const extrudeGeometry = new THREE.ExtrudeGeometry(generateShape, extrudeSettings);
@@ -703,6 +708,7 @@ function GeneratedTableTop({
       reflectivity: 0.6, // Higher reflectivity for polished surface
       ior: 1.5, // Index of refraction for stone
       transmission: 0.0, // No transmission for solid stone
+      side: THREE.DoubleSide, // Render both sides so bottom looks complete
     });
     
     // Apply texture if loaded
@@ -740,8 +746,8 @@ function GeneratedTableTop({
           geometry={geometry} 
           material={material3D} 
           rotation={rotation}
-          castShadow
-          receiveShadow
+          castShadow={false}
+          receiveShadow={false}
         />
         {/* Loading indicator - subtle overlay */}
         <mesh rotation={rotation}>
@@ -906,17 +912,42 @@ function Base({ modelPath, baseStyle, dimensions, shape }: {
             if (child instanceof THREE.Mesh) {
                 // Realistic matte gray metal finish - like powder-coated or anodized furniture
                 // No shine, no reflections, just solid matte material
+                // Double-sided to hide gaps from any viewing angle
                 child.material = new THREE.MeshStandardMaterial({
                     color: "#5A5A5A", // Slightly darker realistic gray
                     metalness: 0.1, // Very low metalness - barely metallic
                     roughness: 0.95, // Very high roughness - completely matte
+                    side: THREE.DoubleSide, // Render both sides to hide gaps
                     // No clearcoat, no reflectivity - just solid matte material
                 });
-                child.castShadow = true;
-                child.receiveShadow = true;
+                child.castShadow = false;
+                child.receiveShadow = false;
             }
         });
     }, [clonedScene, baseStyle]);
+
+    // Calculate base bounding box for bottom cap
+    const baseBoundingBox = useMemo(() => {
+        const box = new THREE.Box3();
+        box.setFromObject(clonedScene);
+        if (!box.isEmpty()) {
+            return {
+                min: box.min.clone(),
+                max: box.max.clone(),
+                size: box.getSize(new THREE.Vector3()),
+                center: box.getCenter(new THREE.Vector3())
+            };
+        }
+        return null;
+    }, [clonedScene]);
+
+    // Base material for bottom cap - match background color to hide it
+    const baseMaterial = useMemo(() => {
+        return new THREE.MeshStandardMaterial({
+            color: "#f5f5f5", // Match canvas background color
+            side: THREE.DoubleSide,
+        });
+    }, []);
 
     return (
         <group 
@@ -925,6 +956,25 @@ function Base({ modelPath, baseStyle, dimensions, shape }: {
             scale={[baseScale.x, baseScale.y, baseScale.z]}
         >
             <primitive object={clonedScene} />
+            {/* Bottom cap to close gaps at the base of feet */}
+            {baseBoundingBox && (
+                <mesh
+                    position={[
+                        baseBoundingBox.center.x,
+                        baseBoundingBox.min.y - 0.001, // Slightly below the bottom
+                        baseBoundingBox.center.z
+                    ]}
+                    material={baseMaterial}
+                    rotation={[-Math.PI / 2, 0, 0]} // Rotate to face upward
+                >
+                    <planeGeometry 
+                        args={[
+                            baseBoundingBox.size.x * 1.2, // Slightly larger to ensure coverage
+                            baseBoundingBox.size.z * 1.2
+                        ]} 
+                    />
+                </mesh>
+            )}
         </group>
     );
 }
@@ -940,7 +990,8 @@ function CombinedModel({
   thickness,
   textureType,
   baseStyle,
-  onPositioned 
+  onPositioned,
+  onTextureLoading
 }: { 
   tableTopPath?: string; 
   basePath?: string; 
@@ -952,6 +1003,7 @@ function CombinedModel({
   textureType?: string;
   baseStyle?: string;
   onPositioned?: () => void;
+  onTextureLoading?: (loading: boolean) => void;
 }) {
   const baseGroupRef = useRef<THREE.Group>(null);
   const tableGroupRef = useRef<THREE.Group>(null);
@@ -966,45 +1018,32 @@ function CombinedModel({
         // For generated table tops, position immediately without waiting
         if (baseGroupRef.current) {
           // Try to calculate from base, but don't wait too long
-          const timeoutId = setTimeout(() => {
-            try {
+          // Calculate position immediately for generated table tops
+          try {
+            if (baseGroupRef.current) {
               const baseBox = new THREE.Box3();
               baseBox.setFromObject(baseGroupRef.current!);
               
               if (!baseBox.isEmpty()) {
                 const baseTop = baseBox.max.y;
-                // Position table top so its bottom surface sits EXACTLY on top of the base (perfectly attached)
-                // ExtrudeGeometry creates geometry extruded along Y from 0 to thickness
-                // After rotation [-PI/2, 0, 0] then [0, PI/2, 0], the bottom is at the origin
-                // So we position exactly at baseTop for perfect attachment
-                const calculatedHeight = baseTop; // Direct attachment - no gap
-                setTableHeight(calculatedHeight); // Exact positioning - perfectly attached
+                setTableHeight(baseTop);
               } else {
-                // Fallback if base not loaded yet - wait a bit more
-                setTimeout(() => {
-                  if (baseGroupRef.current) {
-                    try {
-                      const baseBox = new THREE.Box3();
-                      baseBox.setFromObject(baseGroupRef.current!);
-                      if (!baseBox.isEmpty()) {
-                        const baseTop = baseBox.max.y;
-                        setTableHeight(baseTop); // Direct attachment
-                      }
-                    } catch (e) {
-                      const tableTopThickness = thickness || 0.02;
-                      setTableHeight(tableTopThickness / 2);
-                    }
-                  }
-                }, 100);
+                const tableTopThickness = thickness || 0.02;
+                setTableHeight(tableTopThickness / 2);
               }
-            } catch (error) {
-              console.error('Error calculating position:', error);
-              setTableHeight(0.3); // Default height above ground
+            } else {
+              const tableTopThickness = thickness || 0.02;
+              setTableHeight(tableTopThickness / 2);
             }
             setIsPositioned(true);
             onPositioned?.();
-          }, 50); // Shorter timeout for generated tops
-          return () => clearTimeout(timeoutId);
+          } catch (error) {
+            console.error('Error calculating position:', error);
+            const tableTopThickness = thickness || 0.02;
+            setTableHeight(tableTopThickness / 2);
+            setIsPositioned(true);
+            onPositioned?.();
+          }
         } else {
           // No base (round/oval), position at ground level with half thickness
           const tableTopThickness = thickness || 0.02;
@@ -1015,56 +1054,32 @@ function CombinedModel({
         return;
       }
 
-      // For GLB models, use the original positioning logic
+      // For GLB models, calculate position immediately
       if (baseGroupRef.current) {
-        const timeoutId = setTimeout(() => {
-          try {
-            const baseBox = new THREE.Box3();
-            baseBox.setFromObject(baseGroupRef.current!);
-            
-            if (!baseBox.isEmpty()) {
-              const baseTop = baseBox.max.y;
-              // Position table top so its bottom surface sits EXACTLY on top of the base (perfectly attached)
-              // ExtrudeGeometry creates geometry with bottom at y=0, so we position at baseTop
-              const calculatedHeight = baseTop; // Direct attachment - no offset
-              setTableHeight(calculatedHeight); // Exact positioning - perfectly attached
-            } else {
-              // Retry if base not loaded yet
-              setTimeout(() => {
-                if (baseGroupRef.current) {
-                  try {
-                    const retryBox = new THREE.Box3();
-                    retryBox.setFromObject(baseGroupRef.current!);
-                    if (!retryBox.isEmpty()) {
-                      const baseTop = retryBox.max.y;
-                      setTableHeight(baseTop); // Direct attachment
-                    }
-                  } catch (e) {
-                    const tableTopThickness = thickness || 0.02;
-                    setTableHeight(tableTopThickness / 2);
-                  }
-                }
-              }, 150);
-            }
-            
-            setTimeout(() => {
-              setIsPositioned(true);
-              onPositioned?.();
-            }, 150);
-          } catch (error) {
-            console.error('Error calculating position:', error);
+        try {
+          const baseBox = new THREE.Box3();
+          baseBox.setFromObject(baseGroupRef.current!);
+          
+          if (!baseBox.isEmpty()) {
+            const baseTop = baseBox.max.y;
+            setTableHeight(baseTop);
+          } else {
             const tableTopThickness = thickness || 0.02;
-            setTableHeight(0.3 + (tableTopThickness / 2)); // Default height with thickness
-            setIsPositioned(true);
-            onPositioned?.();
+            setTableHeight(tableTopThickness / 2);
           }
-        }, 200);
-        
-        return () => clearTimeout(timeoutId);
+          setIsPositioned(true);
+          onPositioned?.();
+        } catch (error) {
+          console.error('Error calculating position:', error);
+          const tableTopThickness = thickness || 0.02;
+          setTableHeight(tableTopThickness / 2);
+          setIsPositioned(true);
+          onPositioned?.();
+        }
       } else {
         // No base (round/oval), position at ground level with half thickness
         const tableTopThickness = thickness || 0.02;
-        setTableHeight(tableTopThickness / 2); // Position so bottom sits on ground
+        setTableHeight(tableTopThickness / 2);
         setIsPositioned(true);
         onPositioned?.();
       }
@@ -1120,6 +1135,7 @@ function CombinedModel({
               material={material}
               edgeProfile={edgeProfile}
               textureType={textureType}
+              onTextureLoading={onTextureLoading}
             />
           ) : (
             <PlaceholderTableTop material={material} />
@@ -1147,32 +1163,14 @@ function PlaceholderModel() {
   );
 }
 
-const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseStyle, dimensions, edgeProfile, thickness, textureType }: ModelViewerProps) => {
+const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseStyle, dimensions, edgeProfile, thickness, textureType, onTextureLoading }: ModelViewerProps) => {
   const [hasError, setHasError] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const [isPositioned, setIsPositioned] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-    setHasError(false);
-  }, []);
 
   useEffect(() => {
     setHasError(false);
     setIsPositioned(false); // Reset when models change
   }, [tableTopPath, basePath, material]);
-
-  if (!isMounted) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-secondary/10">
-        <div className="text-center p-8">
-          <p className="font-sans text-sm text-muted-foreground">
-            Se încarcă...
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   if (hasError) {
     return (
@@ -1192,18 +1190,8 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
   try {
     return (
       <div className="w-full h-full bg-gradient-to-b from-secondary/20 to-secondary/5 rounded-lg overflow-hidden relative">
-        {/* Loading overlay - hides the jumping effect */}
-        {!isPositioned && (
-          <div className="absolute inset-0 bg-secondary/10 backdrop-blur-sm z-10 flex items-center justify-center">
-            <div className="text-center p-8">
-              <p className="font-sans text-sm text-muted-foreground">
-                Se încarcă...
-              </p>
-            </div>
-          </div>
-        )}
         <Canvas
-          shadows
+          shadows={false}
           gl={{ 
             antialias: true, 
             alpha: true,
@@ -1213,7 +1201,7 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.2
           }}
-          dpr={[1, 2]}
+          dpr={[1, 1.5]}
           className="w-full h-full"
           onCreated={(state) => {
             try {
@@ -1237,57 +1225,21 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
         >
             <PerspectiveCamera makeDefault position={[0, 1, 3]} fov={50} />
             
-            {/* Professional studio lighting setup for photorealistic rendering */}
-            <ambientLight intensity={0.4} />
+            {/* Optimized lighting setup for faster rendering */}
+            <ambientLight intensity={0.6} />
             
-            {/* Main key light - bright, casts shadows */}
+            {/* Main key light - bright, no shadows for performance */}
             <directionalLight 
               position={[5, 8, 5]} 
-              intensity={2.5} 
-              castShadow
-              shadow-mapSize-width={2048}
-              shadow-mapSize-height={2048}
-              shadow-camera-left={-5}
-              shadow-camera-right={5}
-              shadow-camera-top={5}
-              shadow-camera-bottom={-5}
-              shadow-bias={-0.0001}
+              intensity={1.5} 
+              castShadow={false}
             />
             
             {/* Fill light - softer, from opposite side */}
             <directionalLight 
               position={[-5, 6, -5]} 
-              intensity={0.8} 
+              intensity={0.5} 
               castShadow={false}
-            />
-            
-            {/* Rim light - adds depth and separation */}
-            <directionalLight 
-              position={[-3, 4, 8]} 
-              intensity={0.6} 
-              castShadow={false}
-            />
-            
-            {/* Top light - soft overhead illumination */}
-            <pointLight 
-              position={[0, 10, 0]} 
-              intensity={0.8}
-              distance={15}
-              decay={2}
-            />
-            
-            {/* Additional accent lights for realism */}
-            <pointLight 
-              position={[4, 5, 4]} 
-              intensity={0.5}
-              distance={10}
-              decay={2}
-            />
-            <pointLight 
-              position={[-4, 5, -4]} 
-              intensity={0.3}
-              distance={10}
-              decay={2}
             />
             
             <CombinedModel 
@@ -1301,6 +1253,7 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
               textureType={textureType}
               baseStyle={baseStyle}
               onPositioned={() => setIsPositioned(true)}
+              onTextureLoading={onTextureLoading}
             />
             
             <OrbitControls
@@ -1309,14 +1262,16 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
               enableRotate={true}
               minDistance={2}
               maxDistance={10}
+              minPolarAngle={Math.PI / 3} // Prevent looking from below (60 degrees minimum - very restrictive)
+              maxPolarAngle={Math.PI / 1.4} // Limit to about 128 degrees (prevent viewing base from below)
               autoRotate={false}
             />
             
-            {/* High-quality environment for realistic reflections */}
+            {/* Simplified environment for faster loading */}
             <Environment 
-              preset="studio" 
+              preset="city" 
               background={false}
-              environmentIntensity={1.0}
+              environmentIntensity={0.8}
             />
           </Suspense>
         </Canvas>

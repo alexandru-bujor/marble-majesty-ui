@@ -12,7 +12,7 @@ const testimonials = [
     title: 'Colecționar de Artă, Cluj',
   },
   {
-    quote: 'O investiție în frumos și durabilitate. După 5 ani, masa arată la fel de impecabil ca în prima zi. Recomand cu încredere Pietra Nobile.',
+    quote: 'O investiție în frumos și durabilitate. După 5 ani, masa arată la fel de impecabil ca în prima zi. Recomand cu încredere MobArt.',
     author: 'Elena Dumitrescu',
     title: 'Designer, Timișoara',
   },

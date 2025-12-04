@@ -64,7 +64,7 @@ const Footer = () => {
                 { name: 'Toate Produsele', href: '/shop' },
                 { name: 'Mese Dining', href: '/shop' },
                 { name: 'Mese Cafea', href: '/shop' },
-                { name: 'Design Personalizat', href: '/contact' },
+                { name: 'Design Personalizat', href: '/configurator' },
               ].map((item) => (
                 <li key={item.name}>
                   <Link
@@ -86,7 +86,6 @@ const Footer = () => {
             <ul className="space-y-4">
               {[
                 { name: 'Despre Noi', href: '/about' },
-                { name: 'Showroom', href: '/showroom' },
                 { name: 'Contact', href: '/contact' },
               ].map((item) => (
                 <li key={item.name}>
@@ -133,14 +132,7 @@ const Footer = () => {
                       +373 793 936 43
                   </a>
               </li>
-              <li>
-                <span className="font-sans text-sm text-marble/60 flex items-start gap-3">
-                  <MapPin size={16} strokeWidth={1.5} className="text-gold/50 mt-0.5 flex-shrink-0" />
-                  Str. Elegantei Nr. 42,
-                  <br />
-                  Sector 1, București
-                </span>
-              </li>
+
             </ul>
           </div>
         </div>
@@ -150,7 +142,7 @@ const Footer = () => {
       <div className="border-t border-marble/10">
         <div className="container-luxury py-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="font-sans text-xs text-marble/40">
-            © {currentYear} Pietra Nobile. Toate drepturile rezervate.
+            © {currentYear} MobArt. Toate drepturile rezervate.
           </p>
           <div className="flex gap-6">
             {['Termeni & Condiții', 'Confidențialitate', 'Cookie-uri'].map((item) => (

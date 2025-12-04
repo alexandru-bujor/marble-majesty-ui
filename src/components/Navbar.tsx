@@ -19,19 +19,22 @@ const Navbar = () => {
     { name: 'Acasă', href: '/' },
     { name: 'Magazin', href: '/shop' },
     { name: 'Configurator', href: '/configurator' },
-    { name: 'Showroom', href: '/showroom' },
     { name: 'Despre Noi', href: '/about' },
     { name: 'Contact', href: '/contact' },
   ];
 
   const isActive = (href: string) => location.pathname === href;
+  
+  // Always show glass effect on configurator page
+  const isConfigurator = location.pathname === '/configurator';
+  const shouldShowGlass = isScrolled || isConfigurator;
 
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        isScrolled
-          ? 'glass py-4'
-          : 'bg-transparent py-6'
+        shouldShowGlass
+          ? 'glass py-4 '
+          : 'bg-transparent py-6 text-white'  
       }`}
     >
       <div className="container-luxury flex items-center justify-between">
@@ -48,10 +51,13 @@ const Navbar = () => {
               key={link.name}
               to={link.href}
               className={`font-sans text-sm tracking-[0.15em] uppercase transition-colors duration-300 ${
-                isActive(link.href) 
-                  ? 'text-gold' 
-                  : 'text-foreground/80 hover:text-gold'
+                  isActive(link.href)
+                      ? 'text-gold'
+                      : shouldShowGlass
+                          ? 'text-foreground/80 hover:text-gold'
+                          : 'text-white/80 hover:text-white'
               }`}
+
             >
               {link.name}
             </Link>

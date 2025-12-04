@@ -15,7 +15,7 @@ const ShowroomPage = () => {
       <section className="relative h-[70vh] overflow-hidden">
         <img
           src={heroImage}
-          alt="Showroom Pietra Nobile"
+          alt="Showroom MobArt"
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-graphite via-graphite/50 to-transparent" />

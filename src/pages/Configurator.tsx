@@ -20,6 +20,7 @@ import html2canvas from 'html2canvas';
 const Configurator = () => {
   const [material, setMaterial] = useState(''); // Not used, kept for compatibility
   const [shape, setShape] = useState('rectangular');
+  const [isTextureLoading, setIsTextureLoading] = useState(false);
   // Dimensions based on shape
   const [radius, setRadius] = useState([100]); // For circle
   const [squareLength, setSquareLength] = useState([150]); // For square
@@ -28,22 +29,14 @@ const Configurator = () => {
   const [largestDiameter, setLargestDiameter] = useState([200]); // For oval
   const [smallestDiameter, setSmallestDiameter] = useState([120]); // For oval
   const [borderRadius, setBorderRadius] = useState([0]); // Border radius for all shapes (cm)
-  const [edgeProfile, setEdgeProfile] = useState('standard'); // Edge profile type
+  const [edgeProfile, setEdgeProfile] = useState('eased'); // Edge profile type
   const [thickness, setThickness] = useState(20); // Thickness in mm (20mm or 30mm)
   const [baseStyle, setBaseStyle] = useState('base4'); // Default to base4 (baza eleganta)
   const [textureType, setTextureType] = useState('1');
-  const [marginProfile, setMarginProfile] = useState('simple'); // Margin profile: simple, a-little-rounded, rounded
   const [configPanelOpen, setConfigPanelOpen] = useState(true); // Config panel visibility
 
-  // Margin profile options
-  const marginProfiles = [
-    { value: 'simple', label: 'Simplu' },
-    { value: 'a-little-rounded', label: 'Puțin Rotunjit' },
-    { value: 'rounded', label: 'Rotunjit' },
-  ];
-
   // Texture type options - all 48 HEIC images
-  const textureTypes = Array.from({ length: 48 }, (_, i) => ({
+  const textureTypes = Array.from({ length: 26 }, (_, i) => ({
     value: String(i + 1),
     label: String(i + 1),
   }));
@@ -55,13 +48,10 @@ const Configurator = () => {
     { value: 'oval', label: 'Ovală' },
   ];
 
-  // Edge profile types (edge shape) - matching AllInStone
+  // Edge profile types (edge shape) - only rounded options
   const edgeProfiles = [
-    { value: 'standard', label: 'Standard' },
-    { value: 'pencil-round', label: 'Pencil Round' },
-    { value: 'shark-nose', label: 'Shark Nose' },
-    { value: 'bullnose', label: 'Bull Nose' },
-    { value: 'eased', label: 'Eased' },
+    { value: 'eased', label: 'Puțin Rotunjit' },
+    { value: 'pencil-round', label: 'Rotunjit' },
   ];
 
   // AllInStone base styles - using their actual base names from the API
@@ -116,11 +106,10 @@ const Configurator = () => {
     setLargestDiameter([200]);
     setSmallestDiameter([120]);
     setBorderRadius([0]);
-    setEdgeProfile('standard');
+    setEdgeProfile('eased');
     setThickness(20);
     setBaseStyle('base4');
     setTextureType('1');
-    setMarginProfile('simple');
   };
 
   // Prepare dimensions object for ModelViewer
@@ -342,62 +331,70 @@ const Configurator = () => {
     <div className="h-screen w-screen bg-background overflow-hidden flex flex-col">
       <Navbar />
       
-      {/* Configurator Section - Full Screen */}
-      <section className="flex-1 flex flex-col">
-        <div className="flex-1 flex flex-col">
-          {/* 3D Model Viewer - Full Screen */}
-          <div className="flex-1 min-h-0">
-            <Card className="border-border overflow-hidden h-full">
-              <CardContent className="p-0 h-full">
-                <div ref={canvasRef} className="w-full h-full">
-                  <Suspense fallback={
-                    <div className="w-full h-full flex items-center justify-center bg-secondary/10">
-                      <div className="text-center p-8">
-                        <p className="font-sans text-sm text-muted-foreground">
-                          Se încarcă vizualizatorul 3D...
-                        </p>
-                      </div>
+      {/* Configurator Section - Full Screen, positioned below navbar */}
+      <section className="flex-1 flex flex-col md:flex-row min-h-0 pt-20 md:pt-24">
+        {/* 3D Model Viewer - Takes remaining space, full width on mobile */}
+        <div className="flex-1 min-h-0 relative">
+          <Card className="border-border overflow-hidden h-full">
+            <CardContent className="p-0 h-full">
+              <div ref={canvasRef} className="w-full h-full relative">
+                <Suspense fallback={
+                  <div className="w-full h-full flex items-center justify-center bg-secondary/10">
+                    <div className="text-center p-8">
+                      <p className="font-sans text-sm text-muted-foreground">
+                        Se încarcă vizualizatorul 3D...
+                      </p>
                     </div>
-                  }>
-                      <ModelViewer
-                          tableTopPath={tableTopPath}
-                          basePath={basePath}
-                          material={material}
-                          shape={shape}
-                          baseStyle={baseStyle}
-                          dimensions={dimensions}
-                          edgeProfile={edgeProfile}
-                          thickness={thickness / 1000} // Convert mm to meters
-                          textureType={textureType}
-                      />
-                  </Suspense>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                  </div>
+                }>
+                    <ModelViewer
+                        tableTopPath={tableTopPath}
+                        basePath={basePath}
+                        material={material}
+                        shape={shape}
+                        baseStyle={baseStyle}
+                        dimensions={dimensions}
+                        edgeProfile={edgeProfile}
+                        thickness={thickness / 1000} // Convert mm to meters
+                        textureType={textureType}
+                        onTextureLoading={setIsTextureLoading}
+                    />
+                </Suspense>
+                
+                {/* Texture Loading Overlay */}
+                {isTextureLoading && (
+                  <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="text-center p-8 space-y-4">
+                      <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+                      <p className="font-sans text-sm font-medium text-foreground">
+                        Loading texture...
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Toggle Button - Mobile Optimized */}
+          {/* Toggle Button - Mobile Only */}
           <button
             onClick={() => setConfigPanelOpen(!configPanelOpen)}
-            className="absolute bottom-0 left-1/2 transform -translate-x-1/2 z-50 bg-background/95 backdrop-blur-sm border border-border border-b-0 rounded-t-lg px-4 md:px-6 py-2 md:py-2.5 flex items-center gap-2 hover:bg-background transition-colors shadow-lg"
+            className="md:hidden absolute bottom-0 left-1/2 transform -translate-x-1/2 z-50 bg-background/95 backdrop-blur-sm border border-border border-b-0 rounded-t-lg px-4 py-2.5 flex items-center gap-2 hover:bg-background transition-colors shadow-lg"
           >
-            <span className="font-sans text-[10px] md:text-xs tracking-[0.1em] md:tracking-[0.15em] uppercase text-foreground hidden sm:inline">
+            <span className="font-sans text-[10px] tracking-[0.1em] uppercase text-foreground">
               {configPanelOpen ? 'Ascunde' : 'Afișează'}
             </span>
-            <span className="font-sans text-[10px] md:text-xs tracking-[0.1em] md:tracking-[0.15em] uppercase text-foreground hidden md:inline">
-              {configPanelOpen ? ' Configurații' : ' Configurații'}
-            </span>
-            {configPanelOpen ? <ChevronDown size={18} className="sm:w-4 sm:h-4 md:w-4 md:h-4" /> : <ChevronUp size={18} className="sm:w-4 sm:h-4 md:w-4 md:h-4" />}
+            {configPanelOpen ? <ChevronDown size={18} className="w-4 h-4" /> : <ChevronUp size={18} className="w-4 h-4" />}
           </button>
+        </div>
 
-          {/* Configuration Panel - Overlay on bottom - Mobile Optimized */}
-          <div className={`absolute bottom-0 left-0 right-0 bg-background/98 backdrop-blur-md border-t border-border transition-transform duration-300 max-h-[85vh] overflow-y-auto ${
-            configPanelOpen ? 'translate-y-0' : 'translate-y-full'
+        {/* Configuration Panel - Desktop: Fixed Right Sidebar, Mobile: Bottom Overlay */}
+        <div className={`md:static md:w-[420px] md:h-full md:translate-y-0 md:border-t-0 md:border-l absolute bottom-0 left-0 right-0 md:right-auto bg-background/98 backdrop-blur-md border-t border-border transition-transform duration-300 max-h-[85vh] md:max-h-full overflow-y-auto ${
+            configPanelOpen ? 'translate-y-0' : 'translate-y-full md:translate-y-0'
           }`}>
-            <div className="p-4 md:p-6 pb-6 md:pb-6">
-              <div className="container-luxury max-w-7xl mx-auto">
-                {/* Mobile: Single column, Desktop: Grid */}
-                <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-3">
+            <div className="p-4 md:p-6 pb-6 md:pb-6 md:overflow-y-auto md:h-full">
+              {/* Mobile: Single column, Desktop: Single column sidebar */}
+              <div className="flex flex-col gap-4 md:gap-4">
               {/* Shape Selection - First */}
               <Card className="border-border shadow-sm">
                 <CardContent className="p-5 md:p-4 space-y-3">
@@ -494,27 +491,6 @@ const Configurator = () => {
               </CardContent>
             </Card>
 
-            {/* Margin Profile Selection */}
-            <Card className="border-border shadow-sm">
-              <CardContent className="p-5 md:p-4 space-y-3">
-                <label className="font-sans text-sm md:text-xs tracking-[0.15em] uppercase text-foreground mb-3 md:mb-2 block font-medium">
-                  Profil Margine
-                </label>
-                <Select value={marginProfile} onValueChange={setMarginProfile}>
-                  <SelectTrigger className="w-full h-12 md:h-10 text-base md:text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {marginProfiles.map((mp) => (
-                      <SelectItem key={mp.value} value={mp.value} className="text-base md:text-sm py-3 md:py-2">
-                        {mp.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-
             {/* Base Style */}
             <Card className="border-border shadow-sm">
               <CardContent className="p-5 md:p-4 space-y-3">
@@ -536,8 +512,8 @@ const Configurator = () => {
               </CardContent>
             </Card>
 
-            {/* Dimensions - Shape Specific - Full Width - Mobile Optimized */}
-            <Card className="border-border shadow-sm md:col-span-2 lg:col-span-3 xl:col-span-4">
+            {/* Dimensions - Shape Specific - Full Width */}
+            <Card className="border-border shadow-sm">
               <CardContent className="p-5 md:p-6 space-y-5 md:space-y-6">
                 <h3 className="font-sans text-base md:text-sm tracking-[0.15em] uppercase text-foreground font-semibold mb-4 md:mb-0">
                   Dimensiuni (cm)
@@ -668,8 +644,8 @@ const Configurator = () => {
                 </CardContent>
             </Card>
 
-            {/* Summary & Actions - Full Width - Mobile Optimized */}
-            <Card className="border-border shadow-sm md:col-span-2 lg:col-span-3 xl:col-span-4">
+            {/* Summary & Actions - Full Width */}
+            <Card className="border-border shadow-sm">
               <CardContent className="p-5 md:p-6 space-y-5 md:space-y-6">
                 <h3 className="font-serif text-xl md:text-2xl text-foreground mb-4 font-semibold">
                   Rezumat Configurație
@@ -709,7 +685,7 @@ const Configurator = () => {
                   <div className="space-y-3 pt-2">
                     <Button className="w-full btn-luxury-filled flex items-center justify-center gap-2 h-12 md:h-10 text-base md:text-sm font-medium">
                       <ShoppingBag size={20} className="md:w-4 md:h-4" />
-                      Adaugă în Coș
+                      Trimite specificații
                     </Button>
                     <Button
                       variant="outline"
@@ -730,10 +706,8 @@ const Configurator = () => {
                   </div>
                 </CardContent>
             </Card>
-                </div>
               </div>
             </div>
-          </div>
         </div>
       </section>
     </div>
