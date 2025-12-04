@@ -104,7 +104,6 @@ const Configurator = () => {
   const [webGLSupported, setWebGLSupported] = useState<boolean | null>(null);
   const [modelViewerError, setModelViewerError] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
-  const [skip3D, setSkip3D] = useState(false); // Skip 3D on mobile to prevent crashes
   // Dimensions based on shape
   const [radius, setRadius] = useState([100]); // For circle
   const [squareLength, setSquareLength] = useState([150]); // For square
@@ -117,7 +116,7 @@ const Configurator = () => {
   const [thickness, setThickness] = useState(20); // Thickness in mm (20mm or 30mm)
   const [baseStyle, setBaseStyle] = useState('base4'); // Default to base4 (baza eleganta)
   const [textureType, setTextureType] = useState('1');
-  const [configPanelOpen, setConfigPanelOpen] = useState(isMobile); // Config panel visibility - starts open on mobile for better UX
+  const [configPanelOpen, setConfigPanelOpen] = useState(false); // Config panel visibility - starts closed so users can see 3D viewer
 
   // Texture type options - all 48 HEIC images
   const textureTypes = Array.from({ length: 26 }, (_, i) => ({
@@ -214,16 +213,15 @@ const Configurator = () => {
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // Check WebGL support on mount and detect mobile
+  // Check WebGL support on mount
   useEffect(() => {
     const webglSupported = checkWebGLSupport();
     setWebGLSupported(webglSupported);
     
-    // On mobile, skip 3D entirely to prevent crashes
+    // On mobile, open settings panel by default but allow 3D viewer
     if (isMobile) {
-      setSkip3D(true);
-      setConfigPanelOpen(true); // Open settings panel by default on mobile
-      console.log('Mobile device detected - 3D viewer disabled for stability');
+      setConfigPanelOpen(false); // Start with panel closed so users can see 3D viewer
+      console.log('Mobile device detected - 3D viewer enabled');
     }
   }, [isMobile]);
 
@@ -541,42 +539,22 @@ const Configurator = () => {
           <Card className="border-border overflow-hidden h-full">
             <CardContent className="p-0 h-full">
               <div ref={canvasRef} className="w-full h-full relative">
-                {/* On mobile, skip 3D entirely to prevent crashes */}
-                {skip3D || modelViewerError ? (
+                {/* Show error message only if there's an actual error */}
+                {modelViewerError ? (
                   <div className="w-full h-full flex items-center justify-center bg-secondary/10">
                     <div className="text-center p-8 space-y-4">
-                      {skip3D ? (
-                        <>
-                          <div className="text-6xl mb-4">📐</div>
-                          <p className="font-sans text-sm text-muted-foreground mb-2">
-                            Configurator de Masă
-                          </p>
-                          <p className="font-sans text-xs text-muted-foreground mb-4">
-                            Folosește panoul de setări pentru a configura masa dorită. Vizualizarea 3D este disponibilă pe dispozitive desktop.
-                          </p>
-                          <button
-                            onClick={() => setConfigPanelOpen(true)}
-                            className="btn-luxury-filled px-4 py-2 text-sm"
-                          >
-                            Deschide Setările
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <p className="font-sans text-sm text-muted-foreground mb-2">
-                            Eroare la încărcarea vizualizatorului 3D
-                          </p>
-                          <button
-                            onClick={() => {
-                              setModelViewerError(false);
-                              window.location.reload();
-                            }}
-                            className="btn-luxury-filled px-4 py-2 text-sm"
-                          >
-                            Reîncarcă
-                          </button>
-                        </>
-                      )}
+                      <p className="font-sans text-sm text-muted-foreground mb-2">
+                        Eroare la încărcarea vizualizatorului 3D
+                      </p>
+                      <button
+                        onClick={() => {
+                          setModelViewerError(false);
+                          window.location.reload();
+                        }}
+                        className="btn-luxury-filled px-4 py-2 text-sm"
+                      >
+                        Reîncarcă
+                      </button>
                     </div>
                   </div>
                 ) : (

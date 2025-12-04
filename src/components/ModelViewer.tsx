@@ -5,6 +5,13 @@ import * as THREE from 'three';
 // @ts-ignore - heic2any doesn't have types
 import heic2any from 'heic2any';
 
+// Mobile detection helper
+const isMobileDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    window.innerWidth < 768;
+};
+
 // Ensure Three.js is available
 if (typeof window !== 'undefined' && !(window as any).THREE) {
   (window as any).THREE = THREE;
@@ -1166,6 +1173,7 @@ function PlaceholderModel() {
 const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseStyle, dimensions, edgeProfile, thickness, textureType, onTextureLoading }: ModelViewerProps) => {
   const [hasError, setHasError] = useState(false);
   const [isPositioned, setIsPositioned] = useState(false);
+  const isMobile = isMobileDevice();
 
   useEffect(() => {
     setHasError(false);
@@ -1207,15 +1215,15 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
         <Canvas
           shadows={false}
           gl={{ 
-            antialias: true, 
+            antialias: !isMobile, // Disable antialias on mobile for better performance
             alpha: true,
-            powerPreference: "high-performance",
+            powerPreference: isMobile ? "default" : "high-performance",
             stencil: false,
             depth: true,
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.2
           }}
-          dpr={[1, 1.5]}
+          dpr={isMobile ? [1, 1] : [1, 1.5]} // Lower DPR on mobile for better performance
           className="w-full h-full"
           onCreated={(state) => {
             try {
