@@ -534,8 +534,21 @@ const Configurator = () => {
       
       {/* Configurator Section - Full Screen, positioned below navbar */}
       <section className="flex-1 flex flex-col md:flex-row min-h-0 pt-20 md:pt-24">
+        {/* Toggle Button - Mobile Only, Fixed below navbar when panel is closed */}
+        {isMobile && !configPanelOpen && (
+          <button
+            onClick={() => setConfigPanelOpen(true)}
+            className="md:hidden fixed top-20 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-center gap-2 hover:bg-background transition-colors shadow-sm"
+          >
+            <span className="font-sans text-xs tracking-[0.1em] uppercase text-foreground">
+              Afișează Setările
+            </span>
+            <ChevronUp size={18} className="w-4 h-4" />
+          </button>
+        )}
+        
         {/* 3D Model Viewer - Hidden on mobile when panel is open, takes remaining space on desktop */}
-        <div className={`${isMobile && configPanelOpen ? 'hidden' : 'flex-1'} min-h-0 relative`}>
+        <div className={`${isMobile && configPanelOpen ? 'hidden' : 'flex-1'} min-h-0 relative ${isMobile && !configPanelOpen ? 'pt-16' : ''}`}>
           <Card className="border-border overflow-hidden h-full">
             <CardContent className="p-0 h-full">
               <div ref={canvasRef} className="w-full h-full relative">
@@ -598,38 +611,40 @@ const Configurator = () => {
             </CardContent>
           </Card>
 
-          {/* Toggle Button - Mobile Only */}
-          <button
-            onClick={() => setConfigPanelOpen(!configPanelOpen)}
-            className="md:hidden absolute bottom-0 left-1/2 transform -translate-x-1/2 z-50 bg-background/95 backdrop-blur-sm border border-border border-b-0 rounded-t-lg px-4 py-2.5 flex items-center gap-2 hover:bg-background transition-colors shadow-lg"
-          >
-            <span className="font-sans text-[10px] tracking-[0.1em] uppercase text-foreground">
-              {configPanelOpen ? 'Ascunde' : 'Afișează'}
-            </span>
-            {configPanelOpen ? <ChevronDown size={18} className="w-4 h-4" /> : <ChevronUp size={18} className="w-4 h-4" />}
-          </button>
         </div>
 
         {/* Configuration Panel - Desktop: Fixed Right Sidebar, Mobile: Full Screen Overlay */}
-        <div className={`md:static md:w-[420px] md:h-full md:translate-y-0 md:border-t-0 md:border-l absolute bottom-0 left-0 right-0 md:right-auto bg-background/98 backdrop-blur-md border-t border-border transition-transform duration-300 ${isMobile ? 'max-h-[100vh]' : 'max-h-[85vh]'} md:max-h-full overflow-y-auto ${
+        <div className={`md:static md:w-[420px] md:h-full md:translate-y-0 md:border-t-0 md:border-l absolute bottom-0 left-0 right-0 md:right-auto bg-background/98 backdrop-blur-md border-t border-border transition-transform duration-300 ${isMobile ? 'max-h-[90vh] top-20' : 'max-h-[85vh]'} md:max-h-full overflow-y-auto ${
             configPanelOpen ? 'translate-y-0' : 'translate-y-full md:translate-y-0'
           }`}>
-            <div className="p-4 md:p-6 pb-6 md:pb-6 md:overflow-y-auto md:h-full">
-              {/* Mobile: Single column, Desktop: Single column sidebar */}
-              <div className="flex flex-col gap-4 md:gap-4">
+            {/* Toggle Button - Mobile Only, inside panel at top */}
+            {isMobile && (
+              <button
+                onClick={() => setConfigPanelOpen(false)}
+                className="md:hidden sticky top-0 z-50 w-full bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-center gap-2 hover:bg-background transition-colors shadow-sm"
+              >
+                <span className="font-sans text-xs tracking-[0.1em] uppercase text-foreground">
+                  Ascunde Setările
+                </span>
+                <ChevronDown size={18} className="w-4 h-4" />
+              </button>
+            )}
+            <div className={`${isMobile ? 'p-4 pb-20' : 'p-4 md:p-6'} md:pb-6 md:overflow-y-auto md:h-full`}>
+              {/* Mobile: Single column with better spacing, Desktop: Single column sidebar */}
+              <div className={`flex flex-col ${isMobile ? 'gap-3' : 'gap-4 md:gap-4'}`}>
               {/* Shape Selection - First */}
               <Card className="border-border shadow-sm">
-                <CardContent className="p-5 md:p-4 space-y-3">
-                  <label className="font-sans text-sm md:text-xs tracking-[0.15em] uppercase text-foreground mb-3 md:mb-2 block font-medium">
+                <CardContent className={`${isMobile ? 'p-4' : 'p-5 md:p-4'} space-y-3`}>
+                  <label className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} tracking-[0.15em] uppercase text-foreground ${isMobile ? 'mb-2' : 'mb-3 md:mb-2'} block font-medium`}>
                     Formă
                   </label>
                   <Select value={shape} onValueChange={setShape}>
-                    <SelectTrigger className="w-full h-12 md:h-10 text-base md:text-sm">
+                    <SelectTrigger className={`w-full ${isMobile ? 'h-14 text-base' : 'h-12 md:h-10 text-base md:text-sm'}`}>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className={isMobile ? 'max-h-[50vh]' : ''}>
                       {shapes.map((s) => (
-                        <SelectItem key={s.value} value={s.value} className="text-base md:text-sm py-3 md:py-2">
+                        <SelectItem key={s.value} value={s.value} className={`${isMobile ? 'text-base py-4' : 'text-base md:text-sm py-3 md:py-2'}`}>
                           {s.label}
                         </SelectItem>
                       ))}
@@ -640,17 +655,17 @@ const Configurator = () => {
 
             {/* Texture Type Selection */}
             <Card className="border-border shadow-sm">
-              <CardContent className="p-5 md:p-4 space-y-3">
-                <label className="font-sans text-sm md:text-xs tracking-[0.15em] uppercase text-foreground mb-3 md:mb-2 block font-medium">
+              <CardContent className={`${isMobile ? 'p-4' : 'p-5 md:p-4'} space-y-3`}>
+                <label className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} tracking-[0.15em] uppercase text-foreground ${isMobile ? 'mb-2' : 'mb-3 md:mb-2'} block font-medium`}>
                   Textură
                 </label>
                 <Select value={textureType} onValueChange={setTextureType}>
-                  <SelectTrigger className="w-full h-12 md:h-10 text-base md:text-sm">
+                  <SelectTrigger className={`w-full ${isMobile ? 'h-14 text-base' : 'h-12 md:h-10 text-base md:text-sm'}`}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="max-h-[60vh]">
+                  <SelectContent className={isMobile ? 'max-h-[50vh]' : 'max-h-[60vh]'}>
                     {textureTypes.map((tex) => (
-                      <SelectItem key={tex.value} value={tex.value} className="text-base md:text-sm py-3 md:py-2">
+                      <SelectItem key={tex.value} value={tex.value} className={`${isMobile ? 'text-base py-4' : 'text-base md:text-sm py-3 md:py-2'}`}>
                         {tex.label}
                       </SelectItem>
                     ))}
@@ -661,17 +676,17 @@ const Configurator = () => {
 
             {/* Thickness - Mobile Optimized */}
             <Card className="border-border shadow-sm">
-              <CardContent className="p-5 md:p-4 space-y-3">
-                <label className="font-sans text-sm md:text-xs tracking-[0.15em] uppercase text-foreground mb-3 md:mb-2 block font-medium">
+              <CardContent className={`${isMobile ? 'p-4' : 'p-5 md:p-4'} space-y-3`}>
+                <label className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} tracking-[0.15em] uppercase text-foreground ${isMobile ? 'mb-2' : 'mb-3 md:mb-2'} block font-medium`}>
                   Grosime (mm)
                 </label>
-                <div className="flex gap-3">
+                <div className={`flex ${isMobile ? 'gap-2' : 'gap-3'}`}>
                   <button
                     type="button"
                     onClick={() => setThickness(20)}
-                    className={`flex-1 px-4 py-3 md:py-2 rounded-lg border-2 transition-all text-base md:text-sm font-medium min-h-[48px] md:min-h-0 ${
+                    className={`flex-1 ${isMobile ? 'px-4 py-4 text-base min-h-[52px]' : 'px-4 py-3 md:py-2 text-base md:text-sm min-h-[48px] md:min-h-0'} rounded-lg border-2 transition-all font-medium ${
                       thickness === 20
-                        ? 'bg-foreground text-background border-foreground shadow-md scale-[1.02]'
+                        ? 'bg-foreground text-background border-foreground shadow-md'
                         : 'bg-background text-foreground border-border hover:bg-secondary active:scale-[0.98]'
                     }`}
                   >
@@ -680,9 +695,9 @@ const Configurator = () => {
                   <button
                     type="button"
                     onClick={() => setThickness(30)}
-                    className={`flex-1 px-4 py-3 md:py-2 rounded-lg border-2 transition-all text-base md:text-sm font-medium min-h-[48px] md:min-h-0 ${
+                    className={`flex-1 ${isMobile ? 'px-4 py-4 text-base min-h-[52px]' : 'px-4 py-3 md:py-2 text-base md:text-sm min-h-[48px] md:min-h-0'} rounded-lg border-2 transition-all font-medium ${
                       thickness === 30
-                        ? 'bg-foreground text-background border-foreground shadow-md scale-[1.02]'
+                        ? 'bg-foreground text-background border-foreground shadow-md'
                         : 'bg-background text-foreground border-border hover:bg-secondary active:scale-[0.98]'
                     }`}
                   >
@@ -694,17 +709,17 @@ const Configurator = () => {
 
             {/* Edge Profile */}
             <Card className="border-border shadow-sm">
-              <CardContent className="p-5 md:p-4 space-y-3">
-                <label className="font-sans text-sm md:text-xs tracking-[0.15em] uppercase text-foreground mb-3 md:mb-2 block font-medium">
+              <CardContent className={`${isMobile ? 'p-4' : 'p-5 md:p-4'} space-y-3`}>
+                <label className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} tracking-[0.15em] uppercase text-foreground ${isMobile ? 'mb-2' : 'mb-3 md:mb-2'} block font-medium`}>
                   Profil Margini
                 </label>
                 <Select value={edgeProfile} onValueChange={setEdgeProfile}>
-                  <SelectTrigger className="w-full h-12 md:h-10 text-base md:text-sm">
+                  <SelectTrigger className={`w-full ${isMobile ? 'h-14 text-base' : 'h-12 md:h-10 text-base md:text-sm'}`}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className={isMobile ? 'max-h-[50vh]' : ''}>
                     {edgeProfiles.map((ep) => (
-                      <SelectItem key={ep.value} value={ep.value} className="text-base md:text-sm py-3 md:py-2">
+                      <SelectItem key={ep.value} value={ep.value} className={`${isMobile ? 'text-base py-4' : 'text-base md:text-sm py-3 md:py-2'}`}>
                         {ep.label}
                       </SelectItem>
                     ))}
@@ -715,17 +730,17 @@ const Configurator = () => {
 
             {/* Base Style */}
             <Card className="border-border shadow-sm">
-              <CardContent className="p-5 md:p-4 space-y-3">
-                <label className="font-sans text-sm md:text-xs tracking-[0.15em] uppercase text-foreground mb-3 md:mb-2 block font-medium">
+              <CardContent className={`${isMobile ? 'p-4' : 'p-5 md:p-4'} space-y-3`}>
+                <label className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} tracking-[0.15em] uppercase text-foreground ${isMobile ? 'mb-2' : 'mb-3 md:mb-2'} block font-medium`}>
                   Bază
                 </label>
                 <Select value={baseStyle} onValueChange={setBaseStyle}>
-                  <SelectTrigger className="w-full h-12 md:h-10 text-base md:text-sm">
+                  <SelectTrigger className={`w-full ${isMobile ? 'h-14 text-base' : 'h-12 md:h-10 text-base md:text-sm'}`}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className={isMobile ? 'max-h-[50vh]' : ''}>
                     {baseStyles.map((bs) => (
-                      <SelectItem key={bs.value} value={bs.value} className="text-base md:text-sm py-3 md:py-2">
+                      <SelectItem key={bs.value} value={bs.value} className={`${isMobile ? 'text-base py-4' : 'text-base md:text-sm py-3 md:py-2'}`}>
                         {bs.label}
                       </SelectItem>
                     ))}
@@ -736,18 +751,18 @@ const Configurator = () => {
 
             {/* Dimensions - Shape Specific - Full Width */}
             <Card className="border-border shadow-sm">
-              <CardContent className="p-5 md:p-6 space-y-5 md:space-y-6">
-                <h3 className="font-sans text-base md:text-sm tracking-[0.15em] uppercase text-foreground font-semibold mb-4 md:mb-0">
+              <CardContent className={`${isMobile ? 'p-4' : 'p-5 md:p-6'} ${isMobile ? 'space-y-4' : 'space-y-5 md:space-y-6'}`}>
+                <h3 className={`font-sans ${isMobile ? 'text-sm' : 'text-base md:text-sm'} tracking-[0.15em] uppercase text-foreground font-semibold ${isMobile ? 'mb-3' : 'mb-4 md:mb-0'}`}>
                   Dimensiuni (cm)
                 </h3>
                   
-                  <div className="space-y-5 md:space-y-4">
+                  <div className={isMobile ? 'space-y-4' : 'space-y-5 md:space-y-4'}>
                     {/* Circle: Radius */}
                     {shape === 'round' && (
-                      <div className="space-y-3">
+                      <div className={isMobile ? 'space-y-2.5' : 'space-y-3'}>
                         <div className="flex justify-between items-center">
-                          <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Rază</span>
-                          <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{radius[0]} cm</span>
+                          <span className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} text-muted-foreground font-medium`}>Rază</span>
+                          <span className={`font-sans ${isMobile ? 'text-base' : 'text-lg md:text-xs'} text-foreground font-semibold bg-secondary/50 ${isMobile ? 'px-2.5 py-1.5' : 'px-3 py-1'} rounded-md`}>{radius[0]} cm</span>
                         </div>
                         <Slider
                           value={radius}
@@ -755,17 +770,17 @@ const Configurator = () => {
                           min={50}
                           max={150}
                           step={5}
-                          className="w-full"
+                          className={`w-full ${isMobile ? '[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&>div>div]:h-2.5' : ''}`}
                         />
                       </div>
                     )}
 
                     {/* Square: Length */}
                     {shape === 'square' && (
-                      <div className="space-y-3">
+                      <div className={isMobile ? 'space-y-2.5' : 'space-y-3'}>
                         <div className="flex justify-between items-center">
-                          <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Lungime</span>
-                          <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{squareLength[0]} cm</span>
+                          <span className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} text-muted-foreground font-medium`}>Lungime</span>
+                          <span className={`font-sans ${isMobile ? 'text-base' : 'text-lg md:text-xs'} text-foreground font-semibold bg-secondary/50 ${isMobile ? 'px-2.5 py-1.5' : 'px-3 py-1'} rounded-md`}>{squareLength[0]} cm</span>
                         </div>
                         <Slider
                           value={squareLength}
@@ -773,7 +788,7 @@ const Configurator = () => {
                           min={80}
                           max={200}
                           step={5}
-                          className="w-full"
+                          className={`w-full ${isMobile ? '[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&>div>div]:h-2.5' : ''}`}
                         />
                       </div>
                     )}
@@ -781,10 +796,10 @@ const Configurator = () => {
                     {/* Rectangular: Length and Width */}
                     {shape === 'rectangular' && (
                       <>
-                        <div className="space-y-3">
+                        <div className={isMobile ? 'space-y-2.5' : 'space-y-3'}>
                           <div className="flex justify-between items-center">
-                            <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Lungime</span>
-                            <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{length[0]} cm</span>
+                            <span className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} text-muted-foreground font-medium`}>Lungime</span>
+                            <span className={`font-sans ${isMobile ? 'text-base' : 'text-lg md:text-xs'} text-foreground font-semibold bg-secondary/50 ${isMobile ? 'px-2.5 py-1.5' : 'px-3 py-1'} rounded-md`}>{length[0]} cm</span>
                           </div>
                           <Slider
                             value={length}
@@ -792,13 +807,13 @@ const Configurator = () => {
                             min={120}
                             max={300}
                             step={10}
-                            className="w-full"
+                            className={`w-full ${isMobile ? '[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&>div>div]:h-2.5' : ''}`}
                           />
                         </div>
-                        <div className="space-y-3">
+                        <div className={isMobile ? 'space-y-2.5' : 'space-y-3'}>
                           <div className="flex justify-between items-center">
-                            <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Lățime</span>
-                            <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{width[0]} cm</span>
+                            <span className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} text-muted-foreground font-medium`}>Lățime</span>
+                            <span className={`font-sans ${isMobile ? 'text-base' : 'text-lg md:text-xs'} text-foreground font-semibold bg-secondary/50 ${isMobile ? 'px-2.5 py-1.5' : 'px-3 py-1'} rounded-md`}>{width[0]} cm</span>
                           </div>
                           <Slider
                             value={width}
@@ -806,17 +821,17 @@ const Configurator = () => {
                             min={60}
                             max={150}
                             step={10}
-                            className="w-full"
+                            className={`w-full ${isMobile ? '[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&>div>div]:h-2.5' : ''}`}
                           />
                         </div>
                       </>
                     )}
 
                     {/* Border Radius - Available for all shapes */}
-                    <div className="space-y-3 pt-2 border-t border-border/50">
+                    <div className={`${isMobile ? 'space-y-2.5' : 'space-y-3'} pt-2 border-t border-border/50`}>
                       <div className="flex justify-between items-center">
-                        <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Rază Colțuri</span>
-                        <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{borderRadius[0]} cm</span>
+                        <span className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} text-muted-foreground font-medium`}>Rază Colțuri</span>
+                        <span className={`font-sans ${isMobile ? 'text-base' : 'text-lg md:text-xs'} text-foreground font-semibold bg-secondary/50 ${isMobile ? 'px-2.5 py-1.5' : 'px-3 py-1'} rounded-md`}>{borderRadius[0]} cm</span>
                       </div>
                       <Slider
                         value={borderRadius}
@@ -824,17 +839,17 @@ const Configurator = () => {
                         min={0}
                         max={20}
                         step={1}
-                        className="w-full"
+                        className={`w-full ${isMobile ? '[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&>div>div]:h-2.5' : ''}`}
                       />
                     </div>
 
                     {/* Oval: Largest and Smallest Diameter */}
                     {shape === 'oval' && (
                       <>
-                        <div className="space-y-3">
+                        <div className={isMobile ? 'space-y-2.5' : 'space-y-3'}>
                           <div className="flex justify-between items-center">
-                            <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Diametru Mare</span>
-                            <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{largestDiameter[0]} cm</span>
+                            <span className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} text-muted-foreground font-medium`}>Diametru Mare</span>
+                            <span className={`font-sans ${isMobile ? 'text-base' : 'text-lg md:text-xs'} text-foreground font-semibold bg-secondary/50 ${isMobile ? 'px-2.5 py-1.5' : 'px-3 py-1'} rounded-md`}>{largestDiameter[0]} cm</span>
                           </div>
                           <Slider
                             value={largestDiameter}
@@ -842,13 +857,13 @@ const Configurator = () => {
                             min={120}
                             max={300}
                             step={10}
-                            className="w-full"
+                            className={`w-full ${isMobile ? '[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&>div>div]:h-2.5' : ''}`}
                           />
                         </div>
-                        <div className="space-y-3">
+                        <div className={isMobile ? 'space-y-2.5' : 'space-y-3'}>
                           <div className="flex justify-between items-center">
-                            <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Diametru Mic</span>
-                            <span className="font-sans text-lg md:text-xs text-foreground font-semibold bg-secondary/50 px-3 py-1 rounded-md">{smallestDiameter[0]} cm</span>
+                            <span className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} text-muted-foreground font-medium`}>Diametru Mic</span>
+                            <span className={`font-sans ${isMobile ? 'text-base' : 'text-lg md:text-xs'} text-foreground font-semibold bg-secondary/50 ${isMobile ? 'px-2.5 py-1.5' : 'px-3 py-1'} rounded-md`}>{smallestDiameter[0]} cm</span>
                           </div>
                           <Slider
                             value={smallestDiameter}
@@ -856,7 +871,7 @@ const Configurator = () => {
                             min={60}
                             max={150}
                             step={10}
-                            className="w-full"
+                            className={`w-full ${isMobile ? '[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&>div>div]:h-2.5' : ''}`}
                           />
                         </div>
                       </>
@@ -868,61 +883,61 @@ const Configurator = () => {
 
             {/* Summary & Actions - Full Width */}
             <Card className="border-border shadow-sm">
-              <CardContent className="p-5 md:p-6 space-y-5 md:space-y-6">
-                <h3 className="font-serif text-xl md:text-2xl text-foreground mb-4 font-semibold">
+              <CardContent className={`${isMobile ? 'p-4' : 'p-5 md:p-6'} ${isMobile ? 'space-y-4' : 'space-y-5 md:space-y-6'}`}>
+                <h3 className={`font-serif ${isMobile ? 'text-lg' : 'text-xl md:text-2xl'} text-foreground ${isMobile ? 'mb-3' : 'mb-4'} font-semibold`}>
                   Rezumat Configurație
                 </h3>
 
-                  <div className="space-y-3 md:space-y-2.5 text-sm">
-                    <div className="flex justify-between items-center py-2 border-b border-border/30">
-                      <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Textură</span>
-                      <span className="font-sans text-base md:text-sm text-foreground font-semibold">
+                  <div className={isMobile ? 'space-y-2.5' : 'space-y-3 md:space-y-2.5'}>
+                    <div className={`flex justify-between items-center ${isMobile ? 'py-2.5' : 'py-2'} border-b border-border/30`}>
+                      <span className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} text-muted-foreground font-medium`}>Textură</span>
+                      <span className={`font-sans ${isMobile ? 'text-sm' : 'text-base md:text-sm'} text-foreground font-semibold`}>
                         Textură {textureType}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b border-border/30">
-                      <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Formă</span>
-                      <span className="font-sans text-base md:text-sm text-foreground font-semibold">
+                    <div className={`flex justify-between items-center ${isMobile ? 'py-2.5' : 'py-2'} border-b border-border/30`}>
+                      <span className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} text-muted-foreground font-medium`}>Formă</span>
+                      <span className={`font-sans ${isMobile ? 'text-sm' : 'text-base md:text-sm'} text-foreground font-semibold`}>
                         {shapes.find(s => s.value === shape)?.label}
                       </span>
                     </div>
-                    <div className="flex justify-between items-start py-2 border-b border-border/30">
-                      <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Dimensiuni</span>
-                      <span className="font-sans text-base md:text-sm text-foreground font-semibold text-right max-w-[60%]">
+                    <div className={`flex justify-between items-start ${isMobile ? 'py-2.5' : 'py-2'} border-b border-border/30`}>
+                      <span className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} text-muted-foreground font-medium`}>Dimensiuni</span>
+                      <span className={`font-sans ${isMobile ? 'text-sm' : 'text-base md:text-sm'} text-foreground font-semibold text-right ${isMobile ? 'max-w-[55%]' : 'max-w-[60%]'}`}>
                         {shape === 'round' && `${radius[0]} cm (rază)`}
                         {shape === 'square' && `${squareLength[0]} cm`}
                         {(shape === 'rectangular' || shape === 'curved-rectangular') && `${length[0]} × ${width[0]} cm`}
                         {shape === 'oval' && `${largestDiameter[0]} × ${smallestDiameter[0]} cm`}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="font-sans text-sm md:text-xs text-muted-foreground font-medium">Bază</span>
-                      <span className="font-sans text-base md:text-sm text-foreground font-semibold">
+                    <div className={`flex justify-between items-center ${isMobile ? 'py-2.5' : 'py-2'}`}>
+                      <span className={`font-sans ${isMobile ? 'text-sm' : 'text-sm md:text-xs'} text-muted-foreground font-medium`}>Bază</span>
+                      <span className={`font-sans ${isMobile ? 'text-sm' : 'text-base md:text-sm'} text-foreground font-semibold`}>
                         {baseStyles.find(b => b.value === baseStyle)?.label}
                       </span>
                     </div>
                   </div>
 
 
-                  <div className="space-y-3 pt-2">
-                    <Button className="w-full btn-luxury-filled flex items-center justify-center gap-2 h-12 md:h-10 text-base md:text-sm font-medium">
-                      <ShoppingBag size={20} className="md:w-4 md:h-4" />
+                  <div className={`${isMobile ? 'space-y-2.5 pt-3' : 'space-y-3 pt-2'}`}>
+                    <Button className={`w-full btn-luxury-filled flex items-center justify-center gap-2 ${isMobile ? 'h-14 text-base' : 'h-12 md:h-10 text-base md:text-sm'} font-medium`}>
+                      <ShoppingBag size={isMobile ? 22 : 20} className={isMobile ? '' : 'md:w-4 md:h-4'} />
                       Trimite specificații
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full flex items-center justify-center gap-2 h-12 md:h-10 text-base md:text-sm font-medium border-2"
+                      className={`w-full flex items-center justify-center gap-2 ${isMobile ? 'h-14 text-base' : 'h-12 md:h-10 text-base md:text-sm'} font-medium border-2`}
                       onClick={downloadPDF}
                     >
-                      <Download size={20} className="md:w-4 md:h-4" />
+                      <Download size={isMobile ? 22 : 20} className={isMobile ? '' : 'md:w-4 md:h-4'} />
                       Descarcă Specificații
                     </Button>
                     <Button
                       variant="ghost"
-                      className="w-full flex items-center justify-center gap-2 h-12 md:h-10 text-base md:text-sm font-medium"
+                      className={`w-full flex items-center justify-center gap-2 ${isMobile ? 'h-14 text-base' : 'h-12 md:h-10 text-base md:text-sm'} font-medium`}
                       onClick={resetConfig}
                     >
-                      <RotateCcw size={20} className="md:w-4 md:h-4" />
+                      <RotateCcw size={isMobile ? 22 : 20} className={isMobile ? '' : 'md:w-4 md:h-4'} />
                       Resetează
                     </Button>
                   </div>
