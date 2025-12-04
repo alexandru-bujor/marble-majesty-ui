@@ -573,31 +573,29 @@ const Configurator = () => {
                     </div>
                   </div>
                 ) : (
-                  {!skip3D && (
-                    <Suspense fallback={
-                      <div className="w-full h-full flex items-center justify-center bg-secondary/10">
-                        <div className="text-center p-8">
-                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
-                          <p className="font-sans text-sm text-muted-foreground">
-                            Se încarcă vizualizatorul 3D...
-                          </p>
-                        </div>
+                  <Suspense fallback={
+                    <div className="w-full h-full flex items-center justify-center bg-secondary/10">
+                      <div className="text-center p-8">
+                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
+                        <p className="font-sans text-sm text-muted-foreground">
+                          Se încarcă vizualizatorul 3D...
+                        </p>
                       </div>
-                    }>
-                      <ModelViewer
-                          tableTopPath={tableTopPath}
-                          basePath={basePath}
-                          material={material}
-                          shape={shape}
-                          baseStyle={baseStyle}
-                          dimensions={dimensions}
-                          edgeProfile={edgeProfile}
-                          thickness={thickness / 1000} // Convert mm to meters
-                          textureType={textureType}
-                          onTextureLoading={setIsTextureLoading}
-                      />
-                    </Suspense>
-                  )}
+                    </div>
+                  }>
+                    <ModelViewer
+                        tableTopPath={tableTopPath}
+                        basePath={basePath}
+                        material={material}
+                        shape={shape}
+                        baseStyle={baseStyle}
+                        dimensions={dimensions}
+                        edgeProfile={edgeProfile}
+                        thickness={thickness / 1000} // Convert mm to meters
+                        textureType={textureType}
+                        onTextureLoading={setIsTextureLoading}
+                    />
+                  </Suspense>
                 )}
                 
                 {/* Texture Loading Overlay */}
