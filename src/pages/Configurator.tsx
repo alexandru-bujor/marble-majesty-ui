@@ -714,21 +714,23 @@ const Configurator = () => {
                     </div>
                   </div>
                 ) : (
-                  <Suspense fallback={
-                    <div className="w-full h-full flex items-center justify-center bg-secondary/10" style={{ minHeight: isMobile ? '400px' : '100%' }}>
-                      <div className="text-center p-8">
-                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
-                        <p className="font-sans text-sm text-muted-foreground">
-                          Se încarcă vizualizatorul 3D...
-                        </p>
-                        {isMobile && (
-                          <p className="font-sans text-xs text-muted-foreground mt-2">
-                            Acest proces poate dura câteva secunde pe dispozitive mobile
+                  <Suspense 
+                    fallback={
+                      <div className="w-full h-full flex items-center justify-center bg-secondary/10" style={{ minHeight: isMobile ? '400px' : '100%' }}>
+                        <div className="text-center p-8">
+                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
+                          <p className="font-sans text-sm text-muted-foreground">
+                            Se încarcă vizualizatorul 3D...
                           </p>
-                        )}
+                          {isMobile && (
+                            <p className="font-sans text-xs text-muted-foreground mt-2">
+                              Acest proces poate dura câteva secunde pe dispozitive mobile
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  }>
+                    }
+                  >
                     <ModelViewer
                         tableTopPath={tableTopPath}
                         basePath={basePath}

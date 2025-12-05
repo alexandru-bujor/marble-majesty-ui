@@ -1241,18 +1241,30 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPositioned, setIsPositioned] = useState(false);
   const isMobile = isMobileDevice();
+  const mountCountRef = useRef(0);
+  const lastPropsRef = useRef<string>('');
 
   useEffect(() => {
-    // Use String() to properly log objects on iOS
-    console.log('ModelViewer: Component mounted/reset', 
-      'hasBase:', String(!!basePath), 
-      'hasTableTop:', String(!!tableTopPath), 
-      'shape:', String(shape || 'none'),
-      'isMobile:', String(isMobile)
-    );
-    setHasError(false);
-    setErrorMessage(null);
-    setIsPositioned(false); // Reset when models change
+    // Create a key from props to detect actual changes
+    const propsKey = `${tableTopPath || ''}-${basePath || ''}-${material || ''}-${shape || ''}`;
+    
+    // Only log and reset if props actually changed (not just re-render)
+    if (propsKey !== lastPropsRef.current) {
+      mountCountRef.current++;
+      lastPropsRef.current = propsKey;
+      
+      // Use String() to properly log objects on iOS
+      console.log('ModelViewer: Component mounted/reset', 
+        'hasBase:', String(!!basePath), 
+        'hasTableTop:', String(!!tableTopPath), 
+        'shape:', String(shape || 'none'),
+        'isMobile:', String(isMobile),
+        'mountCount:', mountCountRef.current
+      );
+      setHasError(false);
+      setErrorMessage(null);
+      setIsPositioned(false); // Reset when models change
+    }
     // Remove isMobile from deps - it's calculated once and doesn't change during component lifecycle
   }, [tableTopPath, basePath, material, shape]);
 

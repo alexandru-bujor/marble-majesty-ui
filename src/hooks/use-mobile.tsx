@@ -15,10 +15,13 @@ export function useIsMobile() {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     };
     mql.addEventListener("change", onChange);
-    // Set initial value (might be same, but ensures consistency)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    // Only update if value actually changed to prevent unnecessary re-renders
+    const currentValue = window.innerWidth < MOBILE_BREAKPOINT;
+    if (currentValue !== isMobile) {
+      setIsMobile(currentValue);
+    }
     return () => mql.removeEventListener("change", onChange);
-  }, []);
+  }, [isMobile]); // Include isMobile to check if update is needed
 
   return isMobile;
 }
