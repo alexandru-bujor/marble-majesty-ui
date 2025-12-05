@@ -124,11 +124,12 @@ class ConfiguratorErrorBoundary extends Component<
               </p>
               <button
                 onClick={() => {
-                  // Only reload if user explicitly clicks
-                  // Add a small delay to prevent rapid clicks
+                  // Clear session storage and reload
+                  sessionStorage.clear();
+                  // Use a small delay to prevent rapid clicks
                   setTimeout(() => {
                     window.location.reload();
-                  }, 100);
+                  }, 300);
                 }}
                 className="btn-luxury-filled px-6 py-3"
               >
@@ -351,64 +352,61 @@ const Configurator = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Handle ModelViewer errors - prevent continuous error loops
-  // Only log errors, don't automatically set error state to prevent reload loops
+  // Handle ModelViewer errors - be less aggressive, only catch truly critical errors
   useEffect(() => {
     if (modelViewerError) return; // Don't set up handlers if already in error state
     
+    let errorCount = 0;
+    const MAX_ERRORS = 5; // Allow more errors before giving up
+    
     const handleError = (event: ErrorEvent) => {
+      errorCount++;
       // Capture error details for debugging on mobile
       const errorMsg = event.error?.message || event.message || '';
       const errorStack = event.error?.stack || '';
-      const fullError = `${errorMsg}\n${errorStack}`;
       
-      const isRelevantError = 
-        errorMsg.includes('Canvas') || 
-        errorMsg.includes('WebGL') || 
-        errorMsg.includes('ModelViewer') ||
-        errorMsg.includes('three') ||
-        errorMsg.includes('THREE') ||
-        errorMsg.includes('GLTF') ||
-        errorMsg.includes('GLB');
+      // Only catch truly critical errors that prevent WebGL from working
+      const isCriticalError = 
+        (errorMsg.includes('WebGL') && errorMsg.includes('not supported')) ||
+        (errorMsg.includes('WebGL') && errorMsg.includes('context lost')) ||
+        (errorMsg.includes('WebGL') && errorMsg.includes('failed to create'));
       
-      if (isRelevantError) {
-        console.error('Configurator error:', event.error);
+      if (isCriticalError && errorCount <= MAX_ERRORS) {
+        console.error('Critical Configurator error:', event.error);
+        const fullError = `${errorMsg}\n${errorStack}`;
         // Store error details for display on mobile
         setErrorDetails(fullError.substring(0, 500)); // Limit length
         setModelViewerError(true);
       } else {
-        // Log non-relevant errors but don't show them
-        console.warn('Non-relevant error:', event.error);
+        // Log but don't block - many Three.js errors are non-critical
+        console.warn('Non-critical error (continuing):', errorMsg.substring(0, 100));
       }
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      errorCount++;
       const reason = event.reason;
       const errorMsg = typeof reason === 'object' && reason?.message 
         ? String(reason.message) 
         : String(reason);
-      const errorStack = typeof reason === 'object' && reason?.stack
-        ? String(reason.stack)
-        : '';
-      const fullError = `${errorMsg}\n${errorStack}`;
       
-      const isRelevantError = 
-        errorMsg.includes('Canvas') || 
-        errorMsg.includes('WebGL') || 
-        errorMsg.includes('ModelViewer') ||
-        errorMsg.includes('three') ||
-        errorMsg.includes('THREE') ||
-        errorMsg.includes('GLTF') ||
-        errorMsg.includes('GLB');
+      // Only catch truly critical promise rejections
+      const isCriticalError = 
+        (errorMsg.includes('WebGL') && errorMsg.includes('not supported')) ||
+        (errorMsg.includes('WebGL') && errorMsg.includes('context lost'));
       
-      if (isRelevantError) {
-        console.error('Unhandled promise rejection:', event.reason);
+      if (isCriticalError && errorCount <= MAX_ERRORS) {
+        console.error('Critical unhandled promise rejection:', event.reason);
+        const errorStack = typeof reason === 'object' && reason?.stack
+          ? String(reason.stack)
+          : '';
+        const fullError = `${errorMsg}\n${errorStack}`;
         // Store error details for display on mobile
         setErrorDetails(fullError.substring(0, 500)); // Limit length
         setModelViewerError(true);
       } else {
-        // Log non-relevant errors but don't show them
-        console.warn('Non-relevant promise rejection:', event.reason);
+        // Log but don't block - many promise rejections are non-critical
+        console.warn('Non-critical promise rejection (continuing):', errorMsg.substring(0, 100));
       }
     };
 

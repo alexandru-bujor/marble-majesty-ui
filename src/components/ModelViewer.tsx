@@ -1268,47 +1268,59 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
           dpr={isMobile ? [0.8, 1.2] : [1, 1.5]} // Lower DPR on mobile for better performance
           className="w-full h-full"
           onCreated={(state) => {
+            console.log('Canvas created successfully!', { 
+              hasGL: !!state.gl, 
+              hasScene: !!state.scene,
+              hasCamera: !!state.camera 
+            });
             try {
               // Ensure Three.js is properly initialized
               if (state.gl) {
                 const renderer = state.gl;
                 renderer.setClearColor('#f5f5f5', 0);
+                console.log('Canvas renderer initialized');
                 
                 // Get the actual WebGL context from the renderer
                 const glContext = renderer.getContext();
                 
-                // Log WebGL info for debugging (only in dev)
-                if (import.meta.env.DEV && glContext) {
+                // Log WebGL info for debugging (always log on mobile for debugging)
+                if (glContext) {
                   const debugInfo = glContext.getExtension('WEBGL_debug_renderer_info');
                   if (debugInfo) {
                     const vendor = glContext.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-                    const renderer = glContext.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                    const rendererName = glContext.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
                     // Log individual properties for better iOS compatibility
-                    console.log('WebGL initialized - Vendor:', vendor);
-                    console.log('WebGL initialized - Renderer:', renderer);
-                    console.log('WebGL initialized - Mobile:', isMobile);
+                    console.log('Canvas WebGL - Vendor:', String(vendor || 'unknown'));
+                    console.log('Canvas WebGL - Renderer:', String(rendererName || 'unknown'));
+                    console.log('Canvas WebGL - Mobile:', isMobile);
+                  } else {
+                    console.log('Canvas WebGL - Debug info not available');
                   }
+                } else {
+                  console.warn('Canvas WebGL - Context not available');
                 }
+              } else {
+                console.warn('Canvas created but GL renderer not available');
               }
             } catch (error) {
-              console.error('Error initializing Canvas:', error);
-              const errorMsg = error instanceof Error ? error.message : String(error);
-              const errorStack = error instanceof Error ? error.stack : '';
-              // Only set error once to prevent loops
-              if (!hasError) {
-                setHasError(true);
-                setErrorMessage(`${errorMsg}\n${errorStack}`.substring(0, 500));
-              }
+              console.error('Error in Canvas onCreated (non-critical):', error);
+              // Don't set error state - let it try to render anyway
+              // Only log for debugging
             }
           }}
           onError={(error) => {
-            console.error('Canvas error:', error);
+            console.error('Canvas error (will try to continue):', error);
             const errorMsg = error instanceof Error ? error.message : String(error);
-            const errorStack = error instanceof Error ? error.stack : '';
-            // Set error state with details for debugging
-            if (!hasError) {
-              setHasError(true);
-              setErrorMessage(`${errorMsg}\n${errorStack}`.substring(0, 500));
+            // Only set error state for critical errors that prevent rendering
+            // Don't block on non-critical errors
+            if (errorMsg.includes('WebGL') && errorMsg.includes('not supported')) {
+              if (!hasError) {
+                setHasError(true);
+                setErrorMessage(`${errorMsg}`.substring(0, 500));
+              }
+            } else {
+              // Log but don't block - let it try to render
+              console.warn('Non-critical Canvas error, continuing:', errorMsg);
             }
           }}
         >
