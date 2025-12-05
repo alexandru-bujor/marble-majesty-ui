@@ -1318,11 +1318,11 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
           dpr={isMobile ? [0.8, 1.2] : [1, 1.5]} // Lower DPR on mobile for better performance
           className="w-full h-full"
           onCreated={(state) => {
-            console.log('Canvas created successfully!', { 
-              hasGL: !!state.gl, 
-              hasScene: !!state.scene,
-              hasCamera: !!state.camera 
-            });
+            console.log('Canvas created successfully!', 
+              'hasGL:', String(!!state.gl), 
+              'hasScene:', String(!!state.scene),
+              'hasCamera:', String(!!state.camera)
+            );
             try {
               // Ensure Three.js is properly initialized
               if (state.gl) {
