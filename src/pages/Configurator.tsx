@@ -163,9 +163,19 @@ class ConfiguratorErrorBoundary extends Component<
 }
 
 const Configurator = () => {
+  const configuratorMountRef = useRef(0);
   const isMobile = useIsMobile();
   const [material, setMaterial] = useState(''); // Not used, kept for compatibility
   const [shape, setShape] = useState('rectangular');
+  
+  // Track Configurator component mounts
+  useEffect(() => {
+    configuratorMountRef.current++;
+    console.log('Configurator component mounted', 'mountCount:', configuratorMountRef.current);
+    return () => {
+      console.log('Configurator component unmounting', 'mountCount:', configuratorMountRef.current);
+    };
+  }, []);
   const [isTextureLoading, setIsTextureLoading] = useState(false);
   const [webGLSupported, setWebGLSupported] = useState<boolean | null>(null);
   const [modelViewerError, setModelViewerError] = useState(false);
