@@ -37,7 +37,10 @@ const ModelViewer = lazy(() => {
                 Te rugăm să încerci pe un dispozitiv desktop sau să actualizezi browserul
               </p>
               <button
-                onClick={() => window.location.reload()}
+                onClick={() => {
+                  // Only reload if user explicitly clicks
+                  window.location.reload();
+                }}
                 className="btn-luxury-filled px-4 py-2 text-sm mt-4"
               >
                 Reîncarcă pagina
@@ -85,23 +88,26 @@ const checkWebGLSupport = (): boolean => {
 // Error Boundary for Configurator
 class ConfiguratorErrorBoundary extends Component<
   { children: React.ReactNode },
-  { hasError: boolean; error: Error | null }
+  { hasError: boolean; error: Error | null; errorCount: number }
 > {
   constructor(props: { children: React.ReactNode }) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorCount: 0 };
   }
 
   static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
+    return { hasError: true, error, errorCount: 1 };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Configurator error:', error, errorInfo);
+    console.error('Configurator error boundary caught:', error, errorInfo);
+    // Increment error count to prevent infinite loops
+    this.setState(prevState => ({ errorCount: prevState.errorCount + 1 }));
   }
 
   render() {
-    if (this.state.hasError) {
+    // Only show error UI if error count is reasonable (prevent loops)
+    if (this.state.hasError && this.state.errorCount < 5) {
       return (
         <div className="h-screen w-screen bg-background flex flex-col">
           <Navbar />
@@ -111,12 +117,38 @@ class ConfiguratorErrorBoundary extends Component<
               <p className="font-sans text-sm text-muted-foreground">
                 Ne pare rău, a apărut o problemă la încărcarea configuratorului.
               </p>
+              <p className="font-sans text-xs text-muted-foreground">
+                Poți încerca să reîmprospătezi pagina manual din browser.
+              </p>
               <button
-                onClick={() => window.location.reload()}
+                onClick={() => {
+                  // Only reload if user explicitly clicks
+                  // Add a small delay to prevent rapid clicks
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 100);
+                }}
                 className="btn-luxury-filled px-6 py-3"
               >
                 Reîncarcă pagina
               </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // If too many errors, just show a simple message without reload button
+    if (this.state.hasError && this.state.errorCount >= 5) {
+      return (
+        <div className="h-screen w-screen bg-background flex flex-col">
+          <Navbar />
+          <div className="flex-1 flex items-center justify-center p-6 pt-24">
+            <div className="max-w-md text-center space-y-4">
+              <h2 className="font-serif text-2xl text-foreground">Eroare persistentă</h2>
+              <p className="font-sans text-sm text-muted-foreground">
+                Configuratorul nu poate fi încărcat. Te rugăm să reîmprospătezi pagina manual.
+              </p>
             </div>
           </div>
         </div>
@@ -135,6 +167,7 @@ const Configurator = () => {
   const [webGLSupported, setWebGLSupported] = useState<boolean | null>(null);
   const [modelViewerError, setModelViewerError] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
   // Dimensions based on shape
   const [radius, setRadius] = useState([100]); // For circle
   const [squareLength, setSquareLength] = useState([150]); // For square
@@ -244,19 +277,27 @@ const Configurator = () => {
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // Check WebGL support on mount
+  // Check WebGL support on mount - only run once
   useEffect(() => {
+    // Prevent multiple checks
+    if (webGLSupported !== null) return;
+    
     const checkWebGL = async () => {
       // Wait a bit for DOM to be ready, especially on mobile
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      const webglSupported = checkWebGLSupport();
-      setWebGLSupported(webglSupported);
-      
-      if (webglSupported) {
-        console.log('WebGL is supported');
-      } else {
-        console.warn('WebGL is not supported on this device');
+      try {
+        const webglSupported = checkWebGLSupport();
+        setWebGLSupported(webglSupported);
+        
+        if (webglSupported) {
+          console.log('WebGL is supported');
+        } else {
+          console.warn('WebGL is not supported on this device');
+        }
+      } catch (error) {
+        console.warn('WebGL check failed, assuming not supported:', error);
+        setWebGLSupported(false);
       }
     };
     
@@ -267,7 +308,7 @@ const Configurator = () => {
       setConfigPanelOpen(false); // Start with panel closed so users can see 3D viewer
       console.log('Mobile device detected - 3D viewer enabled');
     }
-  }, [isMobile]);
+  }, [isMobile, webGLSupported]);
 
   // Set timeout for loading to prevent infinite loading
   useEffect(() => {
@@ -279,23 +320,16 @@ const Configurator = () => {
   }, []);
 
   // Handle ModelViewer errors - prevent continuous error loops
+  // Only log errors, don't automatically set error state to prevent reload loops
   useEffect(() => {
     if (modelViewerError) return; // Don't set up handlers if already in error state
     
-    let errorCount = 0;
-    const MAX_ERRORS = 3; // Stop after 3 errors to prevent loops
-    
     const handleError = (event: ErrorEvent) => {
-      errorCount++;
-      if (errorCount > MAX_ERRORS) {
-        // Stop propagation to prevent continuous errors
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
-      
-      // Only catch errors related to ModelViewer/Canvas/WebGL
+      // Capture error details for debugging on mobile
       const errorMsg = event.error?.message || event.message || '';
+      const errorStack = event.error?.stack || '';
+      const fullError = `${errorMsg}\n${errorStack}`;
+      
       const isRelevantError = 
         errorMsg.includes('Canvas') || 
         errorMsg.includes('WebGL') || 
@@ -305,26 +339,26 @@ const Configurator = () => {
         errorMsg.includes('GLTF') ||
         errorMsg.includes('GLB');
       
-      if (isRelevantError && !modelViewerError) {
+      if (isRelevantError) {
         console.error('Configurator error:', event.error);
+        // Store error details for display on mobile
+        setErrorDetails(fullError.substring(0, 500)); // Limit length
         setModelViewerError(true);
-        // Prevent error from propagating further
-        event.preventDefault();
-        event.stopPropagation();
+      } else {
+        // Log non-relevant errors but don't show them
+        console.warn('Non-relevant error:', event.error);
       }
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      errorCount++;
-      if (errorCount > MAX_ERRORS) {
-        event.preventDefault();
-        return;
-      }
-      
       const reason = event.reason;
       const errorMsg = typeof reason === 'object' && reason?.message 
         ? String(reason.message) 
         : String(reason);
+      const errorStack = typeof reason === 'object' && reason?.stack
+        ? String(reason.stack)
+        : '';
+      const fullError = `${errorMsg}\n${errorStack}`;
       
       const isRelevantError = 
         errorMsg.includes('Canvas') || 
@@ -335,18 +369,22 @@ const Configurator = () => {
         errorMsg.includes('GLTF') ||
         errorMsg.includes('GLB');
       
-      if (isRelevantError && !modelViewerError) {
+      if (isRelevantError) {
         console.error('Unhandled promise rejection:', event.reason);
+        // Store error details for display on mobile
+        setErrorDetails(fullError.substring(0, 500)); // Limit length
         setModelViewerError(true);
-        event.preventDefault();
+      } else {
+        // Log non-relevant errors but don't show them
+        console.warn('Non-relevant promise rejection:', event.reason);
       }
     };
 
-    window.addEventListener('error', handleError, { capture: true });
+    window.addEventListener('error', handleError, { capture: false }); // Don't capture to avoid interfering
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
     
     return () => {
-      window.removeEventListener('error', handleError, { capture: true });
+      window.removeEventListener('error', handleError, { capture: false });
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
   }, [modelViewerError]);
@@ -598,20 +636,50 @@ const Configurator = () => {
               <div ref={canvasRef} className="w-full h-full relative" style={{ minHeight: isMobile ? '400px' : '100%' }}>
                 {/* Show error message only if there's an actual error */}
                 {modelViewerError ? (
-                  <div className="w-full h-full flex items-center justify-center bg-secondary/10">
-                    <div className="text-center p-8 space-y-4">
+                  <div className="w-full h-full flex items-center justify-center bg-secondary/10 overflow-y-auto">
+                    <div className="text-center p-8 space-y-4 max-w-md">
                       <p className="font-sans text-sm text-muted-foreground mb-2">
                         Eroare la încărcarea vizualizatorului 3D
                       </p>
-                      <button
-                        onClick={() => {
-                          setModelViewerError(false);
-                          window.location.reload();
-                        }}
-                        className="btn-luxury-filled px-4 py-2 text-sm"
-                      >
-                        Reîncarcă
-                      </button>
+                      {errorDetails && (
+                        <div className="bg-background/50 p-4 rounded-lg text-left max-h-48 overflow-y-auto">
+                          <p className="font-sans text-xs text-muted-foreground mb-2 font-semibold">
+                            Detalii eroare (pentru debugging):
+                          </p>
+                          <pre className="font-sans text-xs text-muted-foreground whitespace-pre-wrap break-words">
+                            {errorDetails}
+                          </pre>
+                        </div>
+                      )}
+                      <p className="font-sans text-xs text-muted-foreground mb-4">
+                        Poți încerca să reîmprospătezi pagina manual
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => {
+                            setModelViewerError(false);
+                            setErrorDetails(null);
+                            // Don't auto-reload - let user manually refresh if needed
+                            // This prevents reload loops
+                          }}
+                          className="btn-luxury-filled px-4 py-2 text-sm"
+                        >
+                          Încearcă din nou
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Copy error to clipboard for debugging
+                            if (errorDetails) {
+                              navigator.clipboard.writeText(errorDetails).then(() => {
+                                alert('Eroarea a fost copiată în clipboard');
+                              });
+                            }
+                          }}
+                          className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-secondary"
+                        >
+                          Copiază eroarea
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ) : (
