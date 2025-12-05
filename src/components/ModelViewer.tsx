@@ -1187,9 +1187,16 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
   const isMobile = isMobileDevice();
 
   useEffect(() => {
+    console.log('ModelViewer: Component mounted/reset', { 
+      hasBase: !!basePath, 
+      hasTableTop: !!tableTopPath, 
+      shape,
+      isMobile 
+    });
     setHasError(false);
+    setErrorMessage(null);
     setIsPositioned(false); // Reset when models change
-  }, [tableTopPath, basePath, material]);
+  }, [tableTopPath, basePath, material, shape, isMobile]);
 
   // Don't show error state immediately - let it try to recover
   // Only show error if it persists after retries
@@ -1274,11 +1281,12 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
                 if (import.meta.env.DEV && glContext) {
                   const debugInfo = glContext.getExtension('WEBGL_debug_renderer_info');
                   if (debugInfo) {
-                    console.log('WebGL initialized:', {
-                      vendor: glContext.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
-                      renderer: glContext.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL),
-                      isMobile
-                    });
+                    const vendor = glContext.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                    const renderer = glContext.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                    // Log individual properties for better iOS compatibility
+                    console.log('WebGL initialized - Vendor:', vendor);
+                    console.log('WebGL initialized - Renderer:', renderer);
+                    console.log('WebGL initialized - Mobile:', isMobile);
                   }
                 }
               }

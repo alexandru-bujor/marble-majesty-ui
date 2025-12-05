@@ -75,7 +75,9 @@ const checkWebGLSupport = (): boolean => {
     if (debugInfo) {
       const vendor = gl1.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
       const renderer = gl1.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-      console.log('WebGL Info:', { vendor, renderer });
+      // Log individual properties for better iOS compatibility
+      console.log('WebGL Info - Vendor:', vendor);
+      console.log('WebGL Info - Renderer:', renderer);
     }
     
     return true;
@@ -280,24 +282,36 @@ const Configurator = () => {
   // Check WebGL support on mount - only run once
   useEffect(() => {
     // Prevent multiple checks
-    if (webGLSupported !== null) return;
+    if (webGLSupported !== null) {
+      console.log('WebGL check already completed, skipping');
+      return;
+    }
+    
+    let isMounted = true;
+    console.log('Starting WebGL check...');
     
     const checkWebGL = async () => {
       // Wait a bit for DOM to be ready, especially on mobile
       await new Promise(resolve => setTimeout(resolve, 200));
       
+      if (!isMounted) return; // Component unmounted, don't update state
+      
       try {
         const webglSupported = checkWebGLSupport();
-        setWebGLSupported(webglSupported);
-        
-        if (webglSupported) {
-          console.log('WebGL is supported');
-        } else {
-          console.warn('WebGL is not supported on this device');
+        if (isMounted) {
+          setWebGLSupported(webglSupported);
+          
+          if (webglSupported) {
+            console.log('WebGL is supported');
+          } else {
+            console.warn('WebGL is not supported on this device');
+          }
         }
       } catch (error) {
-        console.warn('WebGL check failed, assuming not supported:', error);
-        setWebGLSupported(false);
+        if (isMounted) {
+          console.warn('WebGL check failed, assuming not supported:', error);
+          setWebGLSupported(false);
+        }
       }
     };
     
@@ -308,6 +322,10 @@ const Configurator = () => {
       setConfigPanelOpen(false); // Start with panel closed so users can see 3D viewer
       console.log('Mobile device detected - 3D viewer enabled');
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [isMobile, webGLSupported]);
 
   // Set timeout for loading to prevent infinite loading
@@ -708,7 +726,14 @@ const Configurator = () => {
                         edgeProfile={edgeProfile}
                         thickness={thickness / 1000} // Convert mm to meters
                         textureType={textureType}
-                        onTextureLoading={setIsTextureLoading}
+                        onTextureLoading={(loading) => {
+                          setIsTextureLoading(loading);
+                          if (loading) {
+                            console.log('Texture loading started');
+                          } else {
+                            console.log('Texture loading completed');
+                          }
+                        }}
                     />
                   </Suspense>
                 )}
