@@ -18,35 +18,66 @@ import html2canvas from 'html2canvas';
 
 // Lazy load ModelViewer with error handling to prevent continuous errors
 const ModelViewer = lazy(() => {
-  return import('@/components/ModelViewer').catch((error) => {
-    console.error('Failed to lazy load ModelViewer:', error);
-    // Return a safe fallback component that won't cause errors
-    return {
-      default: () => (
-        <div className="w-full h-full flex items-center justify-center bg-secondary/10">
-          <div className="text-center p-8 space-y-4">
-            <p className="font-sans text-sm text-muted-foreground mb-2">
-              Configuratorul 3D nu este disponibil pe acest dispozitiv
-            </p>
-            <p className="font-sans text-xs text-muted-foreground">
-              Te rugăm să încerci pe un dispozitiv desktop sau să actualizezi browserul
-            </p>
+  return import('@/components/ModelViewer')
+    .then((module) => {
+      // Module loaded successfully
+      return module;
+    })
+    .catch((error) => {
+      console.error('Failed to lazy load ModelViewer:', error);
+      // Return a safe fallback component that won't cause errors
+      return {
+        default: () => (
+          <div className="w-full h-full flex items-center justify-center bg-secondary/10">
+            <div className="text-center p-8 space-y-4">
+              <p className="font-sans text-sm text-muted-foreground mb-2">
+                Configuratorul 3D nu este disponibil pe acest dispozitiv
+              </p>
+              <p className="font-sans text-xs text-muted-foreground">
+                Te rugăm să încerci pe un dispozitiv desktop sau să actualizezi browserul
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="btn-luxury-filled px-4 py-2 text-sm mt-4"
+              >
+                Reîncarcă pagina
+              </button>
+            </div>
           </div>
-        </div>
-      )
-    };
-  });
+        )
+      };
+    });
 });
 
-// Check WebGL support
+// Check WebGL support - improved for mobile
 const checkWebGLSupport = (): boolean => {
   if (typeof window === 'undefined') return false;
   
   try {
     const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    return !!gl;
+    
+    // Try WebGL2 first (better performance)
+    const gl2 = canvas.getContext('webgl2') as WebGL2RenderingContext | null;
+    
+    // Fallback to WebGL1
+    const gl1 = gl2 || (canvas.getContext('webgl') as WebGLRenderingContext | null) || 
+                 (canvas.getContext('experimental-webgl') as WebGLRenderingContext | null);
+    
+    if (!gl1) {
+      return false;
+    }
+    
+    // Verify the context is actually working
+    const debugInfo = gl1.getExtension('WEBGL_debug_renderer_info');
+    if (debugInfo) {
+      const vendor = gl1.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+      const renderer = gl1.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+      console.log('WebGL Info:', { vendor, renderer });
+    }
+    
+    return true;
   } catch (e) {
+    console.error('WebGL check failed:', e);
     return false;
   }
 };
@@ -215,8 +246,21 @@ const Configurator = () => {
 
   // Check WebGL support on mount
   useEffect(() => {
-    const webglSupported = checkWebGLSupport();
-    setWebGLSupported(webglSupported);
+    const checkWebGL = async () => {
+      // Wait a bit for DOM to be ready, especially on mobile
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const webglSupported = checkWebGLSupport();
+      setWebGLSupported(webglSupported);
+      
+      if (webglSupported) {
+        console.log('WebGL is supported');
+      } else {
+        console.warn('WebGL is not supported on this device');
+      }
+    };
+    
+    checkWebGL();
     
     // On mobile, open settings panel by default but allow 3D viewer
     if (isMobile) {
@@ -548,10 +592,10 @@ const Configurator = () => {
         )}
         
         {/* 3D Model Viewer - Hidden on mobile when panel is open, takes remaining space on desktop */}
-        <div className={`${isMobile && configPanelOpen ? 'hidden' : 'flex-1'} min-h-0 relative ${isMobile && !configPanelOpen ? 'pt-16' : ''}`}>
+        <div className={`${isMobile && configPanelOpen ? 'hidden' : 'flex-1'} min-h-0 relative ${isMobile && !configPanelOpen ? 'pt-16' : ''}`} style={{ minHeight: isMobile ? '400px' : '100%' }}>
           <Card className="border-border overflow-hidden h-full">
             <CardContent className="p-0 h-full">
-              <div ref={canvasRef} className="w-full h-full relative">
+              <div ref={canvasRef} className="w-full h-full relative" style={{ minHeight: isMobile ? '400px' : '100%' }}>
                 {/* Show error message only if there's an actual error */}
                 {modelViewerError ? (
                   <div className="w-full h-full flex items-center justify-center bg-secondary/10">
@@ -572,12 +616,17 @@ const Configurator = () => {
                   </div>
                 ) : (
                   <Suspense fallback={
-                    <div className="w-full h-full flex items-center justify-center bg-secondary/10">
+                    <div className="w-full h-full flex items-center justify-center bg-secondary/10" style={{ minHeight: isMobile ? '400px' : '100%' }}>
                       <div className="text-center p-8">
                         <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
                         <p className="font-sans text-sm text-muted-foreground">
                           Se încarcă vizualizatorul 3D...
                         </p>
+                        {isMobile && (
+                          <p className="font-sans text-xs text-muted-foreground mt-2">
+                            Acest proces poate dura câteva secunde pe dispozitive mobile
+                          </p>
+                        )}
                       </div>
                     </div>
                   }>

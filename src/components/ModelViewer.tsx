@@ -5,11 +5,21 @@ import * as THREE from 'three';
 // @ts-ignore - heic2any doesn't have types
 import heic2any from 'heic2any';
 
-// Mobile detection helper
+// Mobile detection helper - more reliable
 const isMobileDevice = (): boolean => {
   if (typeof window === 'undefined') return false;
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    window.innerWidth < 768;
+  
+  // Check user agent
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  // Check screen width
+  const isMobileWidth = window.innerWidth < 768;
+  
+  // Check for touch support
+  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
+  // Consider mobile if any of these conditions are true
+  return isMobileUA || (isMobileWidth && hasTouch);
 };
 
 // Ensure Three.js is available
@@ -1211,7 +1221,7 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
         </div>
       }
     >
-      <div className="w-full h-full bg-gradient-to-b from-secondary/20 to-secondary/5 rounded-lg overflow-hidden relative">
+      <div className="w-full h-full bg-gradient-to-b from-secondary/20 to-secondary/5 rounded-lg overflow-hidden relative" style={{ minHeight: isMobile ? '300px' : '100%' }}>
         <Canvas
           shadows={false}
           gl={{ 
@@ -1220,16 +1230,34 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
             powerPreference: isMobile ? "default" : "high-performance",
             stencil: false,
             depth: true,
+            preserveDrawingBuffer: true, // Important for mobile
+            failIfMajorPerformanceCaveat: false, // Allow fallback on mobile
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.2
           }}
-          dpr={isMobile ? [1, 1] : [1, 1.5]} // Lower DPR on mobile for better performance
+          dpr={isMobile ? [0.8, 1.2] : [1, 1.5]} // Lower DPR on mobile for better performance
           className="w-full h-full"
           onCreated={(state) => {
             try {
               // Ensure Three.js is properly initialized
               if (state.gl) {
-                state.gl.setClearColor('#f5f5f5', 0);
+                const renderer = state.gl;
+                renderer.setClearColor('#f5f5f5', 0);
+                
+                // Get the actual WebGL context from the renderer
+                const glContext = renderer.getContext();
+                
+                // Log WebGL info for debugging (only in dev)
+                if (import.meta.env.DEV && glContext) {
+                  const debugInfo = glContext.getExtension('WEBGL_debug_renderer_info');
+                  if (debugInfo) {
+                    console.log('WebGL initialized:', {
+                      vendor: glContext.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
+                      renderer: glContext.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL),
+                      isMobile
+                    });
+                  }
+                }
               }
             } catch (error) {
               console.error('Error initializing Canvas:', error);
@@ -1237,6 +1265,12 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
               if (!hasError) {
                 setHasError(true);
               }
+            }
+          }}
+          onError={(error) => {
+            console.error('Canvas error:', error);
+            if (!hasError) {
+              setHasError(true);
             }
           }}
         >
@@ -1290,6 +1324,8 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
               minPolarAngle={Math.PI / 3} // Prevent looking from below (60 degrees minimum - very restrictive)
               maxPolarAngle={Math.PI / 1.4} // Limit to about 128 degrees (prevent viewing base from below)
               autoRotate={false}
+              enableDamping={!isMobile} // Disable damping on mobile for better performance
+              dampingFactor={0.05}
             />
             
             {/* Simplified environment for faster loading */}
