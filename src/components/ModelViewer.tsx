@@ -349,10 +349,15 @@ function GeneratedTableTop({
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
   const [isTextureLoading, setIsTextureLoading] = useState(false);
   
-  // Notify parent when loading state changes
+  // Notify parent when loading state changes - use ref to prevent duplicate calls
+  const prevLoadingRef = useRef<boolean | null>(null);
   useEffect(() => {
-    onTextureLoading?.(isTextureLoading);
-  }, [isTextureLoading, onTextureLoading]);
+    // Only call if the value actually changed
+    if (prevLoadingRef.current !== isTextureLoading) {
+      prevLoadingRef.current = isTextureLoading;
+      onTextureLoading?.(isTextureLoading);
+    }
+  }, [isTextureLoading]); // Remove onTextureLoading from deps to prevent re-runs
   
   // Load texture asynchronously with better error handling to prevent crashes
   // Priority: textureType (local) > material (AllInStone)
