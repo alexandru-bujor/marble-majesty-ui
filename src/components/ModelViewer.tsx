@@ -1348,43 +1348,7 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
     // Remove isMobile from deps - it's calculated once and doesn't change during component lifecycle
   }, [tableTopPath, basePath, material, shape]);
 
-  // Don't show error state immediately - let it try to recover
-  // Only show error if it persists after retries
-  if (hasError) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-secondary/10 overflow-y-auto">
-        <div className="text-center p-8 max-w-md">
-          <p className="font-sans text-sm text-muted-foreground mb-2">
-            Eroare la încărcarea modelului 3D
-          </p>
-          {errorMessage && (
-            <div className="bg-background/50 p-4 rounded-lg text-left max-h-48 overflow-y-auto mb-4">
-            <p className="font-sans text-xs text-muted-foreground mb-2 font-semibold">
-              Detalii eroare:
-            </p>
-            <pre className="font-sans text-xs text-muted-foreground whitespace-pre-wrap break-words">
-              {errorMessage}
-            </pre>
-          </div>
-          )}
-          <p className="font-sans text-xs text-muted-foreground mb-4">
-            Configuratorul poate funcționa parțial
-          </p>
-          <button
-            onClick={() => {
-              setHasError(false);
-              setErrorMessage(null);
-              // Try again without reloading
-            }}
-            className="btn-luxury-filled px-4 py-2 text-sm"
-          >
-            Încearcă din nou
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+  // Always render Canvas to prevent hook order changes - hide with CSS when error
   // Wrap Canvas in Error Boundary to catch and stop continuous errors
   return (
     <ModelErrorBoundary
@@ -1402,7 +1366,9 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
       }
     >
       <div className="w-full h-full bg-gradient-to-b from-secondary/20 to-secondary/5 rounded-lg overflow-hidden relative" style={{ minHeight: isMobile ? '300px' : '100%' }}>
-        <Canvas
+        {/* Always mount Canvas to maintain hook order - hide when error */}
+        <div style={{ display: hasError ? 'none' : 'block' }} className="w-full h-full">
+          <Canvas
           shadows={false}
           gl={{ 
             antialias: false, // Disable antialias on mobile for better performance
@@ -1555,6 +1521,41 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
             />
           </Suspense>
         </Canvas>
+        </div>
+        
+        {/* Show error overlay when there's an error - Canvas stays mounted but hidden */}
+        {hasError && (
+          <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-secondary/10 overflow-y-auto z-50">
+            <div className="text-center p-8 max-w-md">
+              <p className="font-sans text-sm text-muted-foreground mb-2">
+                Eroare la încărcarea modelului 3D
+              </p>
+              {errorMessage && (
+                <div className="bg-background/50 p-4 rounded-lg text-left max-h-48 overflow-y-auto mb-4">
+                <p className="font-sans text-xs text-muted-foreground mb-2 font-semibold">
+                  Detalii eroare:
+                </p>
+                <pre className="font-sans text-xs text-muted-foreground whitespace-pre-wrap break-words">
+                  {errorMessage}
+                </pre>
+              </div>
+              )}
+              <p className="font-sans text-xs text-muted-foreground mb-4">
+                Configuratorul poate funcționa parțial
+              </p>
+              <button
+                onClick={() => {
+                  setHasError(false);
+                  setErrorMessage(null);
+                  // Try again without reloading
+                }}
+                className="btn-luxury-filled px-4 py-2 text-sm"
+              >
+                Încearcă din nou
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </ModelErrorBoundary>
   );

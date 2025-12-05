@@ -102,57 +102,61 @@ class ConfiguratorErrorBoundary extends Component<
   }
 
   render() {
-    // Only show error UI if error count is reasonable (prevent loops)
-    if (this.state.hasError && this.state.errorCount < 5) {
-      return (
-        <div className="h-screen w-screen bg-background flex flex-col">
-          <Navbar />
-          <div className="flex-1 flex items-center justify-center p-6 pt-24">
-            <div className="max-w-md text-center space-y-4">
-              <h2 className="font-serif text-2xl text-foreground">Eroare la încărcare</h2>
-              <p className="font-sans text-sm text-muted-foreground">
-                Ne pare rău, a apărut o problemă la încărcarea configuratorului.
-              </p>
-              <p className="font-sans text-xs text-muted-foreground">
-                Poți încerca să reîmprospătezi pagina manual din browser.
-              </p>
-              <button
-                onClick={() => {
-                  // Clear session storage and reload
-                  sessionStorage.clear();
-                  // Use a small delay to prevent rapid clicks
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 300);
-                }}
-                className="btn-luxury-filled px-6 py-3"
-              >
-                Reîncarcă pagina
-              </button>
+    // Always render children to prevent hook order changes - show error overlay instead
+    return (
+      <>
+        {/* Show error UI overlay when there's an error - children stay mounted */}
+        {this.state.hasError && this.state.errorCount < 5 && (
+          <div className="fixed inset-0 h-screen w-screen bg-background flex flex-col z-[9999]">
+            <Navbar />
+            <div className="flex-1 flex items-center justify-center p-6 pt-24">
+              <div className="max-w-md text-center space-y-4">
+                <h2 className="font-serif text-2xl text-foreground">Eroare la încărcare</h2>
+                <p className="font-sans text-sm text-muted-foreground">
+                  Ne pare rău, a apărut o problemă la încărcarea configuratorului.
+                </p>
+                <p className="font-sans text-xs text-muted-foreground">
+                  Poți încerca să reîmprospătezi pagina manual din browser.
+                </p>
+                <button
+                  onClick={() => {
+                    // Clear session storage and reload
+                    sessionStorage.clear();
+                    // Use a small delay to prevent rapid clicks
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 300);
+                  }}
+                  className="btn-luxury-filled px-6 py-3"
+                >
+                  Reîncarcă pagina
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      );
-    }
-
-    // If too many errors, just show a simple message without reload button
-    if (this.state.hasError && this.state.errorCount >= 5) {
-      return (
-        <div className="h-screen w-screen bg-background flex flex-col">
-          <Navbar />
-          <div className="flex-1 flex items-center justify-center p-6 pt-24">
-            <div className="max-w-md text-center space-y-4">
-              <h2 className="font-serif text-2xl text-foreground">Eroare persistentă</h2>
-              <p className="font-sans text-sm text-muted-foreground">
-                Configuratorul nu poate fi încărcat. Te rugăm să reîmprospătezi pagina manual.
-              </p>
+        )}
+        
+        {/* If too many errors, show persistent error but still render children (hidden) */}
+        {this.state.hasError && this.state.errorCount >= 5 && (
+          <div className="fixed inset-0 h-screen w-screen bg-background flex flex-col z-[9999]">
+            <Navbar />
+            <div className="flex-1 flex items-center justify-center p-6 pt-24">
+              <div className="max-w-md text-center space-y-4">
+                <h2 className="font-serif text-2xl text-foreground">Eroare persistentă</h2>
+                <p className="font-sans text-sm text-muted-foreground">
+                  Configuratorul nu poate fi încărcat. Te rugăm să reîmprospătezi pagina manual.
+                </p>
+              </div>
             </div>
           </div>
+        )}
+        
+        {/* Always render children to maintain hook order - hide with CSS if error */}
+        <div style={{ display: this.state.hasError ? 'none' : 'block' }}>
+          {this.props.children}
         </div>
-      );
-    }
-
-    return this.props.children;
+      </>
+    );
   }
 }
 
@@ -708,9 +712,54 @@ const Configurator = () => {
           <Card className="border-border overflow-hidden h-full">
             <CardContent className="p-0 h-full">
               <div ref={canvasRef} className="w-full h-full relative" style={{ minHeight: isMobile ? '400px' : '100%' }}>
-                {/* Show error message only if there's an actual error */}
-                {modelViewerError ? (
-                  <div className="w-full h-full flex items-center justify-center bg-secondary/10 overflow-y-auto">
+                {/* Always mount ModelViewer to prevent hook order changes - hide with CSS when needed */}
+                <div style={{ display: (modelViewerError || (isMobile && !viewportStable && !configPanelOpen)) ? 'none' : 'block' }}>
+                  <Suspense 
+                    fallback={
+                      <div className="w-full h-full flex items-center justify-center bg-secondary/10" style={{ minHeight: isMobile ? '400px' : '100%' }}>
+                        <div className="text-center p-8">
+                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
+                          <p className="font-sans text-sm text-muted-foreground">
+                            Se încarcă vizualizatorul 3D...
+                          </p>
+                          {isMobile && (
+                            <p className="font-sans text-xs text-muted-foreground mt-2">
+                              Acest proces poate dura câteva secunde pe dispozitive mobile
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    }
+                  >
+                    <ModelViewer
+                        tableTopPath={tableTopPath}
+                        basePath={basePath}
+                        material={material}
+                        shape={shape}
+                        baseStyle={baseStyle}
+                        dimensions={dimensions}
+                        edgeProfile={edgeProfile}
+                        thickness={thickness / 1000} // Convert mm to meters
+                        textureType={textureType}
+                        onTextureLoading={useCallback((loading) => {
+                          // Use a ref to prevent duplicate logs
+                          if (loading !== textureLoadingRef.current) {
+                            setIsTextureLoading(loading);
+                            if (loading) {
+                              console.log('Texture loading started');
+                            } else {
+                              console.log('Texture loading completed');
+                            }
+                            textureLoadingRef.current = loading;
+                          }
+                        }, [])}
+                    />
+                  </Suspense>
+                </div>
+                
+                {/* Show error message overlay when there's an error - ModelViewer stays mounted but hidden */}
+                {modelViewerError && (
+                  <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-secondary/10 overflow-y-auto z-50">
                     <div className="text-center p-8 space-y-4 max-w-md">
                       <p className="font-sans text-sm text-muted-foreground mb-2">
                         Eroare la încărcarea vizualizatorului 3D
@@ -756,50 +805,11 @@ const Configurator = () => {
                       </div>
                     </div>
                   </div>
-                ) : (!isMobile || viewportStable || configPanelOpen) ? (
-                  <Suspense 
-                    fallback={
-                      <div className="w-full h-full flex items-center justify-center bg-secondary/10" style={{ minHeight: isMobile ? '400px' : '100%' }}>
-                        <div className="text-center p-8">
-                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent mb-4"></div>
-                          <p className="font-sans text-sm text-muted-foreground">
-                            Se încarcă vizualizatorul 3D...
-                          </p>
-                          {isMobile && (
-                            <p className="font-sans text-xs text-muted-foreground mt-2">
-                              Acest proces poate dura câteva secunde pe dispozitive mobile
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    }
-                  >
-                    <ModelViewer
-                        tableTopPath={tableTopPath}
-                        basePath={basePath}
-                        material={material}
-                        shape={shape}
-                        baseStyle={baseStyle}
-                        dimensions={dimensions}
-                        edgeProfile={edgeProfile}
-                        thickness={thickness / 1000} // Convert mm to meters
-                        textureType={textureType}
-                        onTextureLoading={useCallback((loading) => {
-                          // Use a ref to prevent duplicate logs
-                          if (loading !== textureLoadingRef.current) {
-                            setIsTextureLoading(loading);
-                            if (loading) {
-                              console.log('Texture loading started');
-                            } else {
-                              console.log('Texture loading completed');
-                            }
-                            textureLoadingRef.current = loading;
-                          }
-                        }, [])}
-                    />
-                  </Suspense>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-secondary/10" style={{ minHeight: isMobile ? '400px' : '100%' }}>
+                )}
+                
+                {/* Show placeholder when ModelViewer is not ready on mobile */}
+                {isMobile && !viewportStable && !configPanelOpen && !modelViewerError && (
+                  <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-secondary/10 z-40">
                     <div className="text-center p-8">
                       <p className="font-sans text-sm text-muted-foreground">
                         Deschide panoul de configurare pentru a încărca vizualizatorul 3D
