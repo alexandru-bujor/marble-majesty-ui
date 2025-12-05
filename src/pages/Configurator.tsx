@@ -75,9 +75,9 @@ const checkWebGLSupport = (): boolean => {
     if (debugInfo) {
       const vendor = gl1.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
       const renderer = gl1.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-      // Log individual properties for better iOS compatibility
-      console.log('WebGL Info - Vendor:', vendor);
-      console.log('WebGL Info - Renderer:', renderer);
+      // Log individual properties for better iOS compatibility - use String() to ensure proper display
+      console.log('WebGL Info - Vendor:', String(vendor || 'unknown'));
+      console.log('WebGL Info - Renderer:', String(renderer || 'unknown'));
     }
     
     return true;
@@ -281,9 +281,16 @@ const Configurator = () => {
 
   // Check WebGL support on mount - only run once
   useEffect(() => {
-    // Prevent multiple checks
-    if (webGLSupported !== null) {
-      console.log('WebGL check already completed, skipping');
+    // Prevent multiple checks - use ref to track if check was done
+    const checkKey = 'webgl-check-done';
+    if (sessionStorage.getItem(checkKey) === 'true' || webGLSupported !== null) {
+      if (webGLSupported === null && sessionStorage.getItem(checkKey) === 'true') {
+        // Restore from session storage to prevent re-check
+        const stored = sessionStorage.getItem('webgl-supported');
+        if (stored !== null) {
+          setWebGLSupported(stored === 'true');
+        }
+      }
       return;
     }
     
@@ -300,6 +307,9 @@ const Configurator = () => {
         const webglSupported = checkWebGLSupport();
         if (isMounted) {
           setWebGLSupported(webglSupported);
+          // Store in session storage to prevent re-check on remount
+          sessionStorage.setItem(checkKey, 'true');
+          sessionStorage.setItem('webgl-supported', String(webglSupported));
           
           if (webglSupported) {
             console.log('WebGL is supported');
@@ -311,6 +321,8 @@ const Configurator = () => {
         if (isMounted) {
           console.warn('WebGL check failed, assuming not supported:', error);
           setWebGLSupported(false);
+          sessionStorage.setItem(checkKey, 'true');
+          sessionStorage.setItem('webgl-supported', 'false');
         }
       }
     };
@@ -318,15 +330,17 @@ const Configurator = () => {
     checkWebGL();
     
     // On mobile, open settings panel by default but allow 3D viewer
-    if (isMobile) {
+    // Only set once to prevent multiple logs
+    if (isMobile && !sessionStorage.getItem('mobile-panel-set')) {
       setConfigPanelOpen(false); // Start with panel closed so users can see 3D viewer
       console.log('Mobile device detected - 3D viewer enabled');
+      sessionStorage.setItem('mobile-panel-set', 'true');
     }
     
     return () => {
       isMounted = false;
     };
-  }, [isMobile, webGLSupported]);
+  }, []); // Empty deps - only run once on mount
 
   // Set timeout for loading to prevent infinite loading
   useEffect(() => {
