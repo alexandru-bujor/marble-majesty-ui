@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense, useEffect, useRef, Component, ErrorInfo } from 'react';
+import { useState, useMemo, lazy, Suspense, useEffect, useRef, useCallback, Component, ErrorInfo } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/sections/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -279,6 +279,7 @@ const Configurator = () => {
   }, [shape, radius, squareLength, length, width, largestDiameter, smallestDiameter, borderRadius]);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const textureLoadingRef = useRef(false);
 
   // Check WebGL support on mount - only run once
   useEffect(() => {
@@ -738,14 +739,18 @@ const Configurator = () => {
                         edgeProfile={edgeProfile}
                         thickness={thickness / 1000} // Convert mm to meters
                         textureType={textureType}
-                        onTextureLoading={(loading) => {
-                          setIsTextureLoading(loading);
-                          if (loading) {
-                            console.log('Texture loading started');
-                          } else {
-                            console.log('Texture loading completed');
+                        onTextureLoading={useCallback((loading) => {
+                          // Use a ref to prevent duplicate logs
+                          if (loading !== textureLoadingRef.current) {
+                            setIsTextureLoading(loading);
+                            if (loading) {
+                              console.log('Texture loading started');
+                            } else {
+                              console.log('Texture loading completed');
+                            }
+                            textureLoadingRef.current = loading;
                           }
-                        }}
+                        }, [])}
                     />
                   </Suspense>
                 )}

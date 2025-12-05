@@ -477,7 +477,9 @@ function GeneratedTableTop({
         abortController.abort();
       }
     };
-  }, [material, textureType, shape, dimensions]);
+    // Use JSON.stringify for dimensions to prevent unnecessary re-runs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [material, textureType, shape, JSON.stringify(dimensions)]);
 
   // Generate 2D shape based on table shape
   const generateShape = useMemo(() => {
