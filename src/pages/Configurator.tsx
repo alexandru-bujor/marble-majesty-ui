@@ -36,15 +36,9 @@ const ModelViewer = lazy(() => {
               <p className="font-sans text-xs text-muted-foreground">
                 Te rugăm să încerci pe un dispozitiv desktop sau să actualizezi browserul
               </p>
-              <button
-                onClick={() => {
-                  // Only reload if user explicitly clicks
-                  window.location.reload();
-                }}
-                className="btn-luxury-filled px-4 py-2 text-sm mt-4"
-              >
-                Reîncarcă pagina
-              </button>
+              <p className="font-sans text-xs text-muted-foreground mt-4">
+                Te rugăm să reîmprospătezi pagina manual
+              </p>
             </div>
           </div>
         )
@@ -194,6 +188,7 @@ const Configurator = () => {
   const [baseStyle, setBaseStyle] = useState('base4'); // Default to base4 (baza eleganta)
   const [textureType, setTextureType] = useState('1');
   const [configPanelOpen, setConfigPanelOpen] = useState(false); // Config panel visibility - starts closed so users can see 3D viewer
+  const [viewportStable, setViewportStable] = useState(false); // Track if viewport is stable for mobile lazy loading
 
   // Texture type options - all 48 HEIC images
   const textureTypes = Array.from({ length: 26 }, (_, i) => ({
@@ -361,6 +356,44 @@ const Configurator = () => {
     }, 30000); // 30 seconds timeout
 
     return () => clearTimeout(timer);
+  }, []);
+
+  // Delay heavy imports on mobile - wait for viewport to be stable
+  useEffect(() => {
+    if (!isMobile) {
+      setViewportStable(true); // Desktop loads immediately
+      return;
+    }
+
+    // On mobile, wait for viewport to stabilize or config panel to open
+    const timer = setTimeout(() => {
+      setViewportStable(true);
+    }, 500); // Wait 500ms for viewport to stabilize
+
+    return () => clearTimeout(timer);
+  }, [isMobile]);
+
+  // Also set viewport stable when config panel opens on mobile
+  useEffect(() => {
+    if (isMobile && configPanelOpen) {
+      setViewportStable(true);
+    }
+  }, [isMobile, configPanelOpen]);
+
+  // Add debug markers for tracking issues
+  useEffect(() => {
+    console.log('🚀 mobile load start', performance.now());
+    
+    const handleContextLost = () => console.log('❌ LOST');
+    const handleBeforeUnload = () => console.log('🔄 reload');
+    
+    window.addEventListener('webglcontextlost', handleContextLost);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('webglcontextlost', handleContextLost);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   // Handle ModelViewer errors - be less aggressive, only catch truly critical errors
@@ -723,7 +756,7 @@ const Configurator = () => {
                       </div>
                     </div>
                   </div>
-                ) : (
+                ) : (!isMobile || viewportStable || configPanelOpen) ? (
                   <Suspense 
                     fallback={
                       <div className="w-full h-full flex items-center justify-center bg-secondary/10" style={{ minHeight: isMobile ? '400px' : '100%' }}>
@@ -765,6 +798,14 @@ const Configurator = () => {
                         }, [])}
                     />
                   </Suspense>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-secondary/10" style={{ minHeight: isMobile ? '400px' : '100%' }}>
+                    <div className="text-center p-8">
+                      <p className="font-sans text-sm text-muted-foreground">
+                        Deschide panoul de configurare pentru a încărca vizualizatorul 3D
+                      </p>
+                    </div>
+                  </div>
                 )}
                 
                 {/* Texture Loading Overlay */}

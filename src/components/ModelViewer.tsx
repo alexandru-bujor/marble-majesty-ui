@@ -398,11 +398,46 @@ function GeneratedTableTop({
               
               if (!isMounted) return;
               
+              // Resize HEIC before conversion for mobile - limit to 2560px max
+              const resizeBlob = async (blob: Blob): Promise<Blob> => {
+                return new Promise((resolve, reject) => {
+                  const img = new Image();
+                  img.onload = () => {
+                    const maxSize = 2560;
+                    if (img.width <= maxSize && img.height <= maxSize) {
+                      resolve(blob); // No resize needed
+                      return;
+                    }
+                    
+                    const scale = Math.min(maxSize / img.width, maxSize / img.height);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.floor(img.width * scale);
+                    canvas.height = Math.floor(img.height * scale);
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                      resolve(blob); // Fallback to original
+                      return;
+                    }
+                    
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob((resizedBlob) => {
+                      resolve(resizedBlob || blob);
+                    }, 'image/jpeg', 0.85);
+                  };
+                  img.onerror = () => resolve(blob); // Fallback to original
+                  img.src = URL.createObjectURL(blob);
+                });
+              };
+              
+              // Resize if on mobile before converting
+              const isMobile = isMobileDevice();
+              const processedBlob = isMobile ? await resizeBlob(blob) : blob;
+              
               // Limit HEIC conversion time to prevent crashes
               const conversionPromise = heic2any({
-                blob,
+                blob: processedBlob,
                 toType: 'image/jpeg',
-                quality: 0.8 // Lower quality on mobile to reduce memory
+                quality: isMobile ? 0.75 : 0.8 // Lower quality on mobile to reduce memory
               });
               
               // Add timeout to HEIC conversion
@@ -436,11 +471,56 @@ function GeneratedTableTop({
               if (!isMounted) return;
               
               try {
+                // Mobile texture optimization - reduce memory usage
+                const isIOSDevice = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+                const highDPR = window.devicePixelRatio > 2;
+                
+                if (isIOSDevice && highDPR) {
+                  // Optimize for iOS high-DPI devices
+                  loadedTexture.minFilter = THREE.LinearFilter;
+                  loadedTexture.magFilter = THREE.LinearFilter;
+                  loadedTexture.generateMipmaps = false;
+                  loadedTexture.anisotropy = 1;
+                  // Color space is handled automatically in newer Three.js versions
+                  
+                  // Limit texture size to 2048-2560px max for mobile WebGL
+                  const maxSize = 2560;
+                  if (loadedTexture.image && (loadedTexture.image.width > maxSize || loadedTexture.image.height > maxSize)) {
+                    const scale = Math.min(maxSize / loadedTexture.image.width, maxSize / loadedTexture.image.height);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.floor(loadedTexture.image.width * scale);
+                    canvas.height = Math.floor(loadedTexture.image.height * scale);
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                      ctx.drawImage(loadedTexture.image, 0, 0, canvas.width, canvas.height);
+                      const resizedImage = new Image();
+                      resizedImage.onload = () => {
+                        if (!isMounted) return;
+                        const resizedTexture = new THREE.Texture(resizedImage);
+                        resizedTexture.wrapS = THREE.ClampToEdgeWrapping;
+                        resizedTexture.wrapT = THREE.ClampToEdgeWrapping;
+                        resizedTexture.repeat.set(1, 1);
+                        resizedTexture.minFilter = THREE.LinearFilter;
+                        resizedTexture.magFilter = THREE.LinearFilter;
+                        resizedTexture.generateMipmaps = false;
+                        resizedTexture.anisotropy = 1;
+                        // Color space is handled automatically in newer Three.js versions
+                        resizedTexture.needsUpdate = true;
+                        setTexture(resizedTexture);
+                        setIsTextureLoading(false);
+                      };
+                      resizedImage.src = canvas.toDataURL('image/jpeg', 0.85);
+                      return; // Exit early, texture will be set in onload
+                    }
+                  }
+                }
+                
                 // Use ClampToEdgeWrapping to prevent texture repetition
                 loadedTexture.wrapS = THREE.ClampToEdgeWrapping;
                 loadedTexture.wrapT = THREE.ClampToEdgeWrapping;
                 // Set repeat to 1,1 so texture appears once without duplication
                 loadedTexture.repeat.set(1, 1);
+                loadedTexture.needsUpdate = true;
                 setTexture(loadedTexture);
                 setIsTextureLoading(false);
               } catch (textureError) {
@@ -1325,9 +1405,9 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
         <Canvas
           shadows={false}
           gl={{ 
-            antialias: !isMobile, // Disable antialias on mobile for better performance
+            antialias: false, // Disable antialias on mobile for better performance
             alpha: true,
-            powerPreference: isMobile ? "default" : "high-performance",
+            powerPreference: isMobile ? "low-power" : "high-performance",
             stencil: false,
             depth: true,
             preserveDrawingBuffer: true, // Important for mobile
@@ -1335,7 +1415,8 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.2
           }}
-          dpr={isMobile ? [0.8, 1.2] : [1, 1.5]} // Lower DPR on mobile for better performance
+          dpr={isMobile ? [1, 1.5] : [1, 1.5]} // Lower DPR on mobile for better performance
+          performance={{ min: 0.5 }} // Reduce performance target on mobile
           className="w-full h-full"
           onCreated={(state) => {
             console.log('Canvas created successfully!', 
@@ -1352,6 +1433,24 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
                 
                 // Get the actual WebGL context from the renderer
                 const glContext = renderer.getContext();
+                
+                // Add WebGL context loss handler (iOS critical)
+                const canvas = renderer.domElement;
+                const handleContextLost = (e: Event) => {
+                  e.preventDefault();
+                  console.warn('❌ WebGL Context Lost - attempting recovery');
+                  setHasError(true);
+                  setErrorMessage('WebGL context lost. Please try again.');
+                };
+                
+                const handleContextRestored = () => {
+                  console.log('✅ WebGL Context Restored');
+                  setHasError(false);
+                  setErrorMessage(null);
+                };
+                
+                canvas.addEventListener('webglcontextlost', handleContextLost);
+                canvas.addEventListener('webglcontextrestored', handleContextRestored);
                 
                 // Log WebGL info for debugging (always log on mobile for debugging)
                 if (glContext) {
