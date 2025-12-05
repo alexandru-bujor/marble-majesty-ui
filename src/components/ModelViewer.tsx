@@ -1253,7 +1253,8 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
     setHasError(false);
     setErrorMessage(null);
     setIsPositioned(false); // Reset when models change
-  }, [tableTopPath, basePath, material, shape, isMobile]);
+    // Remove isMobile from deps - it's calculated once and doesn't change during component lifecycle
+  }, [tableTopPath, basePath, material, shape]);
 
   // Don't show error state immediately - let it try to recover
   // Only show error if it persists after retries
