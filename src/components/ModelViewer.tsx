@@ -354,11 +354,13 @@ function GeneratedTableTop({
     onTextureLoading?.(isTextureLoading);
   }, [isTextureLoading, onTextureLoading]);
   
-  // Load texture asynchronously
+  // Load texture asynchronously with better error handling to prevent crashes
   // Priority: textureType (local) > material (AllInStone)
   useEffect(() => {
     let textureUrl: string | null = null;
     let isHeic = false;
+    let isMounted = true;
+    let abortController: AbortController | null = null;
     
     // If textureType is provided, use local texture
     if (textureType && localTextures[textureType]) {
@@ -374,52 +376,92 @@ function GeneratedTableTop({
       setIsTextureLoading(true);
       const loadTexture = async () => {
         try {
+          abortController = new AbortController();
           let finalUrl = textureUrl!;
           
-          // Convert HEIC to blob URL if needed
+          // Convert HEIC to blob URL if needed - with timeout and error handling
           if (isHeic) {
-            const response = await fetch(textureUrl!);
-            const blob = await response.blob();
-            const convertedBlob = await heic2any({
-              blob,
-              toType: 'image/jpeg',
-              quality: 0.92
-            });
-            // heic2any can return an array or a single blob
-            const result = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
-            finalUrl = URL.createObjectURL(result);
+            try {
+              const response = await fetch(textureUrl!, { 
+                signal: abortController.signal,
+                // Add timeout to prevent hanging
+              });
+              
+              if (!isMounted) return;
+              
+              const blob = await response.blob();
+              
+              if (!isMounted) return;
+              
+              // Limit HEIC conversion time to prevent crashes
+              const conversionPromise = heic2any({
+                blob,
+                toType: 'image/jpeg',
+                quality: 0.8 // Lower quality on mobile to reduce memory
+              });
+              
+              // Add timeout to HEIC conversion
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('HEIC conversion timeout')), 10000)
+              );
+              
+              const convertedBlob = await Promise.race([conversionPromise, timeoutPromise]);
+              
+              if (!isMounted) return;
+              
+              // heic2any can return an array or a single blob
+              const result = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+              finalUrl = URL.createObjectURL(result);
+            } catch (heicError) {
+              console.warn('HEIC conversion failed, skipping texture:', heicError);
+              if (isMounted) {
+                setTexture(null);
+                setIsTextureLoading(false);
+              }
+              return;
+            }
           }
+          
+          if (!isMounted) return;
           
           const loader = new THREE.TextureLoader();
           loader.load(
             finalUrl,
             (loadedTexture) => {
-              // Use ClampToEdgeWrapping to prevent texture repetition
-              // This ensures the texture appears once and is clamped to the edges
-              loadedTexture.wrapS = THREE.ClampToEdgeWrapping;
-              loadedTexture.wrapT = THREE.ClampToEdgeWrapping;
-              // Set repeat to 1,1 so texture appears once without duplication
-              loadedTexture.repeat.set(1, 1);
-              setTexture(loadedTexture);
-              setIsTextureLoading(false);
+              if (!isMounted) return;
               
-              // Clean up blob URL if we created one
-              if (isHeic && finalUrl.startsWith('blob:')) {
-                // Don't revoke immediately, let it be cleaned up when component unmounts
+              try {
+                // Use ClampToEdgeWrapping to prevent texture repetition
+                loadedTexture.wrapS = THREE.ClampToEdgeWrapping;
+                loadedTexture.wrapT = THREE.ClampToEdgeWrapping;
+                // Set repeat to 1,1 so texture appears once without duplication
+                loadedTexture.repeat.set(1, 1);
+                setTexture(loadedTexture);
+                setIsTextureLoading(false);
+              } catch (textureError) {
+                console.warn('Error setting texture properties:', textureError);
+                if (isMounted) {
+                  setTexture(null);
+                  setIsTextureLoading(false);
+                }
               }
             },
             undefined,
             (error) => {
               // Texture load failed, use color fallback
               console.warn(`Failed to load texture: ${textureUrl}`, error);
-              setTexture(null);
-              setIsTextureLoading(false);
+              if (isMounted) {
+                setTexture(null);
+                setIsTextureLoading(false);
+              }
             }
           );
         } catch (error) {
-          console.warn(`Failed to convert/load HEIC texture: ${textureUrl}`, error);
-          setTexture(null);
-          setIsTextureLoading(false);
+          console.warn(`Failed to load texture: ${textureUrl}`, error);
+          if (isMounted) {
+            setTexture(null);
+            setIsTextureLoading(false);
+          }
         }
       };
       
@@ -428,6 +470,13 @@ function GeneratedTableTop({
       setTexture(null);
       setIsTextureLoading(false);
     }
+    
+    return () => {
+      isMounted = false;
+      if (abortController) {
+        abortController.abort();
+      }
+    };
   }, [material, textureType, shape, dimensions]);
 
   // Generate 2D shape based on table shape
@@ -1187,12 +1236,13 @@ const ModelViewer = ({ tableTopPath, basePath, material, shape, tableType, baseS
   const isMobile = isMobileDevice();
 
   useEffect(() => {
-    console.log('ModelViewer: Component mounted/reset', { 
-      hasBase: !!basePath, 
-      hasTableTop: !!tableTopPath, 
-      shape,
-      isMobile 
-    });
+    // Use String() to properly log objects on iOS
+    console.log('ModelViewer: Component mounted/reset', 
+      'hasBase:', String(!!basePath), 
+      'hasTableTop:', String(!!tableTopPath), 
+      'shape:', String(shape || 'none'),
+      'isMobile:', String(isMobile)
+    );
     setHasError(false);
     setErrorMessage(null);
     setIsPositioned(false); // Reset when models change
